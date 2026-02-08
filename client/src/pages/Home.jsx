@@ -41,7 +41,7 @@ export default function Home() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Job Description Section */}
-        <Card>
+        <Card className="card-hover">
           <CardHeader>
             <CardTitle>Job Description</CardTitle>
             <CardDescription>
@@ -67,7 +67,7 @@ export default function Home() {
         </Card>
 
         {/* Resume Upload Section */}
-        <Card>
+        <Card className="card-hover">
           <CardHeader>
             <CardTitle>Your Resume</CardTitle>
             <CardDescription>

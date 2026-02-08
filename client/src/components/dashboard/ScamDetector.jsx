@@ -16,7 +16,7 @@ export function ScamDetector({ data }) {
   }
 
   return (
-    <Card>
+    <Card className="card-hover border-l-4 border-l-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <StatusIcon className={`h-6 w-6 ${statusColor}`} />

@@ -3,7 +3,7 @@ import { MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react"
 
 export function ReviewSentiment({ data }) {
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />

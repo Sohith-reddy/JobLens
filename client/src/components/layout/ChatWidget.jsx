@@ -88,8 +88,8 @@ export function ChatWidget() {
       <Button
         size="icon"
         className={cn(
-            "h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110",
-            isOpen ? "bg-secondary text-secondary-foreground" : "bg-primary text-primary-foreground"
+            "h-14 w-14 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 hover:shadow-primary/50",
+            isOpen ? "bg-destructive text-destructive-foreground rotate-90" : "bg-primary text-primary-foreground"
         )}
         onClick={toggleChat}
       >

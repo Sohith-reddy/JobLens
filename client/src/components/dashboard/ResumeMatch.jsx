@@ -3,7 +3,7 @@ import { Briefcase } from "lucide-react"
 
 export function ResumeMatch({ data }) {
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="h-5 w-5" />

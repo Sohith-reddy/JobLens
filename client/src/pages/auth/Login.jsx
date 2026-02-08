@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
 
-export default function Login() {
+export default function Login({ onLogin }) {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
       <Card className="w-full max-w-md border-primary/20 shadow-lg shadow-primary/5">
@@ -64,7 +64,7 @@ export default function Login() {
         </CardContent>
         <CardFooter>
             <div className="flex flex-col w-full gap-4">
-                <Button className="w-full">Sign In</Button>
+                <Button className="w-full" onClick={onLogin}>Sign In</Button>
                 <p className="text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
                     <Link to="/signup" className="underline underline-offset-4 hover:text-primary">

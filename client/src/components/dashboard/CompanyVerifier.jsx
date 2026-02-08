@@ -3,7 +3,7 @@ import { Building2, Globe, Shield } from "lucide-react"
 
 export function CompanyVerifier({ data }) {
   return (
-    <Card>
+    <Card className="card-hover">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5" />

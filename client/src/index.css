@@ -79,3 +79,9 @@
     @apply bg-background text-foreground transition-colors duration-300;
   }
 }
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-primary/10;
+  }
+}
