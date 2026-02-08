@@ -7,6 +7,11 @@ import Home from '@/pages/Home'
 import Dashboard from '@/pages/Dashboard'
 import Login from '@/pages/auth/Login'
 import Signup from '@/pages/auth/Signup'
+import Profile from '@/pages/Profile'
+import Plans from '@/pages/Plans'
+import About from '@/pages/About'
+import Docs from '@/pages/Docs'
+
 import { useState, useEffect } from 'react'
 
 // Layout wrapper to handle conditional Navbar/Footer/Chat visibility
@@ -57,8 +62,13 @@ function App() {
       <Router>
         <Layout isAuthenticated={isAuthenticated} onLogout={logout}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<About />} />
+            <Route path="/analyze" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/docs" element={<Docs />} />
             <Route path="/login" element={<Login onLogin={login} />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/about" element={<div className="p-10 text-center">About Page Placeholder</div>} />

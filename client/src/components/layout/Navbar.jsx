@@ -2,15 +2,18 @@ import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ShieldCheck, User } from 'lucide-react'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
+import { ProfileModal } from '@/components/profile/ProfileModal'
 import { cn } from "@/lib/utils"
 
 export function Navbar({ onLogout }) {
   const location = useLocation()
   
   const navItems = [
-    { name: 'Analyze', path: '/' },
+    { name: 'About', path: '/' },
+    { name: 'Analyze', path: '/analyze' },
     { name: 'Dashboard', path: '/dashboard' },
-    { name: 'About', path: '/about' },
+    { name: 'Plans', path: '/plans' },
+    { name: 'Docs', path: '/docs' },
   ]
 
   return (
@@ -25,8 +28,7 @@ export function Navbar({ onLogout }) {
                 JobLens AI
             </span>
           </Link>
-          
-          {/* Tab-based Navigation */}
+
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
               <Link
@@ -51,10 +53,11 @@ export function Navbar({ onLogout }) {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <div className="hidden sm:flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onLogout}>Sign Out</Button>
-            <Button size="icon" variant="ghost" className="rounded-full">
-                <User className="h-5 w-5" />
-            </Button>
+            <ProfileModal onLogout={onLogout}>
+                <Button size="icon" variant="ghost" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
+                    <User className="h-5 w-5" />
+                </Button>
+            </ProfileModal>
           </div>
            {/* Mobile Menu Placeholder */}
            <Button variant="ghost" size="icon" className="md:hidden">
