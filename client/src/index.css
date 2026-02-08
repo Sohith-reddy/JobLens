@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Vibrant Light Theme - Deep Blue/Indigo/Violet */
+    --background: 225 30% 98%; /* Soft cool white */
+    --foreground: 230 40% 10%; /* Deep dark blue */
+
+    --card: 0 0% 100%;
+    --card-foreground: 230 40% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 40% 10%;
+
+    /* Vivid Primary: Indigo/Violet */
+    --primary: 250 80% 55%; 
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Soft Lavender */
+    --secondary: 250 30% 92%;
+    --secondary-foreground: 250 80% 40%;
+
+    --muted: 220 20% 94%;
+    --muted-foreground: 240 10% 45%;
+
+    --accent: 270 40% 96%;
+    --accent-foreground: 250 80% 45%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 15% 90%;
+    --input: 240 15% 90%;
+    --ring: 250 80% 55%;
+
+    --radius: 0.75rem; /* More rounded */
+  }
+
+  .dark {
+    /* Deep Dark Theme - Slate/Zinc with Neon Accents */
+    --background: 240 20% 8%; /* Very dark blue-gray */
+    --foreground: 210 40% 98%;
+
+    --card: 240 20% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 240 20% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary: Electric Violet/Blue */
+    --primary: 250 90% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 20% 16%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 240 20% 16%;
+    --muted-foreground: 215 20.2% 75%;
+
+    --accent: 240 20% 18%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 20% 16%;
+    --input: 240 20% 16%;
+    --ring: 250 90% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+}
