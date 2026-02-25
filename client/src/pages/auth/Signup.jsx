@@ -4,8 +4,15 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
+import { useState } from "react"
 
 export default function Signup() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const onSignup = () => {
+    console.log("Signup");
+    console.log(email, password);
+  }
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
       <Card className="w-full max-w-md border-primary/20 shadow-lg shadow-primary/5">
@@ -64,7 +71,7 @@ export default function Signup() {
         </CardContent>
         <CardFooter>
             <div className="flex flex-col w-full gap-4">
-                <Button className="w-full">Sign Up</Button>
+                <Button className="w-full" onClick={onSignup()}>Sign Up</Button>
                 <p className="text-center text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <Link to="/login" className="underline underline-offset-4 hover:text-primary">
