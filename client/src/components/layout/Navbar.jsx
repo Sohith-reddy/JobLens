@@ -12,7 +12,7 @@ export function Navbar({ onLogout }) {
     { name: 'About', path: '/' },
     { name: 'Analyze', path: '/analyze' },
     { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Plans', path: '/plans' },
+    // { name: 'Plans', path: '/plans' },
     { name: 'Docs', path: '/docs' },
   ]
 
