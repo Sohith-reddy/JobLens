@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { User, LogOut, Settings, Award, Calendar, ExternalLink, MapPin } from "lucide-react"
 import { Link } from "react-router-dom"
-import { Progress } from "@/components/ui/progress"
+import { Progress } from "@/components/ui/progress" 
 
 export function ProfileModal({ children, onLogout }) {
   return (
