@@ -1,13 +1,51 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useEffect, useState } from "react"
+import { getSystemHealth, getDetectionRules } from "@/lib/joblensApi"
 
 export default function Docs() {
+    const [health, setHealth] = useState(null)
+    const [rulesResponse, setRulesResponse] = useState(null)
+    const [apiError, setApiError] = useState("")
+
   const sections = [
     { id: "introduction", title: "Introduction" },
+        { id: "api-status", title: "API Status" },
     { id: "features", title: "Key Features" },
     { id: "usage", title: "How to Use" },
     { id: "privacy", title: "Privacy & Safety" },
   ]
+
+    useEffect(() => {
+        let isMounted = true
+
+        async function loadApiDocsData() {
+            try {
+                const [healthData, rulesData] = await Promise.all([
+                    getSystemHealth(),
+                    getDetectionRules(),
+                ])
+
+                if (!isMounted) {
+                    return
+                }
+
+                setHealth(healthData)
+                setRulesResponse(rulesData)
+            } catch (error) {
+                if (!isMounted) {
+                    return
+                }
+                setApiError(error.message || "Failed to load API metadata.")
+            }
+        }
+
+        loadApiDocsData()
+
+        return () => {
+            isMounted = false
+        }
+    }, [])
 
   return (
     <div className="container py-10 flex flex-col md:flex-row gap-8">
@@ -35,6 +73,64 @@ export default function Docs() {
                 Welcome to JobLens AI. This guide will help you understand how to use our tools to verify jobs and analyze your resume.
             </p>
         </section>
+
+                <section id="api-status" className="space-y-4 pt-8">
+                        <h2 className="text-2xl font-bold border-b pb-2">API Status</h2>
+
+                        {apiError && (
+                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                                {apiError}
+                            </div>
+                        )}
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">System Health</CardTitle>
+                                    <CardDescription>Live status from /health endpoint</CardDescription>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-1">
+                                    <p><span className="font-medium">Status:</span> {health?.status || "Unknown"}</p>
+                                    <p><span className="font-medium">Model Loaded:</span> {health?.model_loaded ? "Yes" : "No"}</p>
+                                    <p><span className="font-medium">Model Path:</span> {health?.model_path || "N/A"}</p>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Detection Rules</CardTitle>
+                                    <CardDescription>Live metadata from /rules endpoint</CardDescription>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-1">
+                                    <p><span className="font-medium">Total Rules:</span> {rulesResponse?.total_rules ?? "N/A"}</p>
+                                    <p><span className="font-medium">Critical Rules:</span> {(rulesResponse?.rules || []).filter((rule) => rule.severity === "CRITICAL").length}</p>
+                                    <p><span className="font-medium">High Rules:</span> {(rulesResponse?.rules || []).filter((rule) => rule.severity === "HIGH").length}</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Rule Catalog</CardTitle>
+                                <CardDescription>Scrollable list of configured backend detection rules</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-56 w-full rounded-md border p-3">
+                                    <div className="space-y-2 text-sm">
+                                        {(rulesResponse?.rules || []).map((rule) => (
+                                            <div key={rule.rule_id} className="rounded border p-2">
+                                                <p className="font-medium">{rule.rule_id} ({rule.severity})</p>
+                                                <p className="text-muted-foreground">{rule.explanation}</p>
+                                            </div>
+                                        ))}
+                                        {(rulesResponse?.rules || []).length === 0 && (
+                                            <p className="text-muted-foreground">No rules loaded yet.</p>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                </section>
 
         <section id="features" className="space-y-4 pt-8">
             <h2 className="text-2xl font-bold border-b pb-2">Key Features</h2>
