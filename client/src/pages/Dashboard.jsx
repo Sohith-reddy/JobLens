@@ -3,21 +3,20 @@ import { ScamDetector } from "@/components/dashboard/ScamDetector"
 import { CompanyVerifier } from "@/components/dashboard/CompanyVerifier"
 import { ReviewSentiment } from "@/components/dashboard/ReviewSentiment"
 import { ResumeMatch } from "@/components/dashboard/ResumeMatch"
-import { ArrowLeft, RefreshCw } from "lucide-react"
-import { Link } from "react-router-dom"
-import { useState, useEffect } from "react"
+import { ArrowLeft } from "lucide-react"
+import { Link, useLocation } from "react-router-dom"
 
-// Mock Data Analysis
-const mockAnalysis = {
+const fallbackAnalysis = {
   scamAnalysis: {
-    verdict: "High Risk / Likely Scam",
-    score: 85,
-    flags: ["Unusually High Salary Range", "Generic Email Domain (@gmail.com)", "Urgency and Grammatical Errors"]
+    verdict: "Not Analyzed",
+    score: 0,
+    flags: ["Run an analysis from the Analyze page to view API-powered results."],
+    reason: null,
   },
   companyVerification: {
     isVerified: false,
-    domainAge: "5 Days",
-    onlinePresence: "Not Found in Major Registries"
+    domainAge: "Unknown",
+    onlinePresence: "Not Available",
   },
   reviews: {
     sentiment: "No Data",
@@ -27,34 +26,17 @@ const mockAnalysis = {
     cons: null
   },
   resumeMatch: {
-    matchPercentage: 45,
-    missingSkills: ["Python (FastAPI)", "Vector Databases"]
-  }
+    matchPercentage: 0,
+    missingSkills: [],
+  },
+  apiMeta: {
+    warnings: [],
+  },
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-        setData(mockAnalysis)
-        setLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (loading) {
-    return (
-        <div className="container py-8 flex items-center justify-center min-h-[50vh]">
-            <div className="flex flex-col items-center gap-4">
-                <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">Generating comprehensive analysis...</p>
-            </div>
-        </div>
-    )
-  }
+  const location = useLocation()
+  const data = location.state?.analysisData || fallbackAnalysis
 
   return (
     <div className="container py-8 space-y-6">
@@ -85,6 +67,23 @@ export default function Dashboard() {
         <ReviewSentiment data={data.reviews} />
         {/* Placeholder for future detailed text analysis */}
       </div>
+
+      {data.scamAnalysis?.reason && (
+        <div className="rounded-md border p-4 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Decision reason:</span> {data.scamAnalysis.reason}
+        </div>
+      )}
+
+      {data.apiMeta?.warnings?.length > 0 && (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-950/30 dark:text-yellow-200">
+          <p className="font-medium">Extraction warnings</p>
+          <ul className="mt-2 list-disc list-inside space-y-1">
+            {data.apiMeta.warnings.map((warning, index) => (
+              <li key={`${warning}-${index}`}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
