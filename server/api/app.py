@@ -8,11 +8,32 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
+import httpx
+import asyncio
+
 from api.config import DEFAULT_MODEL_PATH
 from api.routes import scoring_router, resume_router, system_router, config_router
 
 logger = logging.getLogger(__name__)
 
+
+async def _keep_alive():
+    """I have written this as a keep-alive function for Render spin-down."""
+    render_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        logger.warning("RENDER_EXTERNAL_URL not set, keep-alive disabled.")
+        return
+    
+    await asyncio.sleep(60) 
+    while True:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.get(f"{render_url}/health")
+                logger.info("Keep-alive ping sent ✓")
+        except Exception as e:
+            logger.warning(f"Keep-alive ping failed: {e}")
+        await asyncio.sleep(10 * 60) 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,9 +50,15 @@ async def lifespan(app: FastAPI):
             f"Could not preload model: {e}. Will attempt to load on first request."
         )
 
+    keep_alive_task = asyncio.create_task(_keep_alive())
     yield
 
     logger.info("Shutting down JobLens API...")
+    keep_alive_task.cancel()
+    try:
+        await keep_alive_task
+    except asyncio.CancelledError:
+        pass
     clear_model_cache()
 
 
