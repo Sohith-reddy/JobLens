@@ -29,7 +29,7 @@ const defaultCompanyData = {
   onlinePresence: 'Not Available',
 }
 
-function normalizeScoringResult(scoringResult) {
+function normalizeScoringResult(scoringResult, extractionConfidence = null) {
   if (!scoringResult) {
     return {
       verdict: 'Not Analyzed',
@@ -49,9 +49,19 @@ function normalizeScoringResult(scoringResult) {
   }
 
   const probability = Number(scoringResult.ml_probability || 0)
+  const confidenceFromResult = Number(scoringResult.extraction_confidence)
+  const confidenceFromPayload = Number(extractionConfidence)
+  const hasConfidenceFromResult = Number.isFinite(confidenceFromResult)
+  const hasConfidenceFromPayload = Number.isFinite(confidenceFromPayload)
+  const riskScore = hasConfidenceFromPayload
+    ? Math.round(confidenceFromPayload * 100)
+    : hasConfidenceFromResult
+    ? Math.round(confidenceFromResult * 100)
+    : Math.round(probability * 100)
+
   return {
     verdict: scoringResult.final_label || 'Unknown',
-    score: Math.round(probability * 100),
+    score: riskScore,
     flags: (scoringResult.rule_hits || []).map((rule) => `${rule.rule_id}: ${rule.explanation}`),
     reason: scoringResult.final_reason || null,
   }
@@ -70,27 +80,6 @@ function normalizeCompanyData(urlScoringResult) {
   }
 }
 
-function normalizeResumeData(resumeResult) {
-  if (!resumeResult) {
-    return {
-      matchPercentage: 0,
-      missingSkills: [],
-    }
-  }
-
-  if (resumeResult.is_valid_job_posting === false) {
-    return {
-      matchPercentage: 0,
-      missingSkills: [resumeResult.message || 'Resume analysis failed due to invalid job description.'],
-    }
-  }
-
-  return {
-    matchPercentage: resumeResult.fit_score?.overall || 0,
-    missingSkills: resumeResult.fit_score?.must_have_gaps || [],
-  }
-}
-
 export default function Home() {
   const navigate = useNavigate()
   const [jobDescription, setJobDescription] = useState('')
@@ -102,6 +91,7 @@ export default function Home() {
   const [scoringPayload, setScoringPayload] = useState(null)
   const [urlScoringPayload, setUrlScoringPayload] = useState(null)
   const [jobDescriptionForResume, setJobDescriptionForResume] = useState('')
+  const [jobInputMap, setJobInputMap] = useState(() => new Map())
   const [showNotJobModal, setShowNotJobModal] = useState(false)
   const [notJobMessage, setNotJobMessage] = useState('')
   const [toast, setToast] = useState({
@@ -142,18 +132,38 @@ export default function Home() {
     setScoringPayload(null)
     setUrlScoringPayload(null)
     setJobDescriptionForResume('')
+    setJobInputMap(new Map())
     setFile(null)
   }
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+      const selectedFile = e.target.files[0]
+      const isPdfType = selectedFile.type === 'application/pdf'
+      const isPdfName = selectedFile.name.toLowerCase().endsWith('.pdf')
+
+      if (!isPdfType && !isPdfName) {
+        setFile(null)
+        setErrorMessage('Please upload only a PDF resume file.')
+        showToast('Invalid file type', 'Only PDF resumes are supported.', 'error')
+        e.target.value = ''
+        return
+      }
+
+      setErrorMessage('')
+      setFile(selectedFile)
+      showToast('Resume attached', 'PDF file added successfully.', 'success')
     }
   }
 
   const handleValidatePosting = async () => {
     const trimmedText = jobDescription.trim()
-    const trimmedUrl = jobUrl.trim()
+    let trimmedUrl = jobUrl.trim()
+    console.log(trimmedUrl)
+    if(trimmedUrl.includes('?currentJobId=')){
+      trimmedUrl =trimmedUrl.replace('?currentJobId=', '')
+      // console.log(trimmedUrl);
+    }
 
     if (!trimmedText && !trimmedUrl) {
       setErrorMessage('Please provide either job text or a job URL to run analysis.')
@@ -178,10 +188,33 @@ export default function Home() {
       if (hasUrl) {
         selectedUrlResult = await scoreJobUrl(trimmedUrl)
         selectedResult = selectedUrlResult?.score_result || selectedUrlResult
-        setJobDescriptionForResume(selectedUrlResult?.final_extracted_text || '')
+        const extractedText = selectedUrlResult?.final_extracted_text || ''
+        setJobDescriptionForResume(extractedText)
+        setJobInputMap(
+          new Map([
+            [
+              'url_input',
+              {
+                url: trimmedUrl,
+                final_extracted_text: extractedText,
+                job_description: extractedText,
+              },
+            ],
+          ])
+        )
       } else {
         selectedResult = await scoreJobText(trimmedText)
         setJobDescriptionForResume(trimmedText)
+        setJobInputMap(
+          new Map([
+            [
+              'text_input',
+              {
+                job_description: trimmedText,
+              },
+            ],
+          ])
+        )
       }
 
       if (selectedResult?.is_job_posting === false) {
@@ -202,7 +235,7 @@ export default function Home() {
       setIsJobPosting(true)
       setScoringPayload(selectedResult)
       setUrlScoringPayload(selectedUrlResult)
-      showToast('Valid job posting detected', 'Resume section is now unlocked.', 'success')
+      showToast('Valid job posting detected', 'Now Upload your Resume.', 'success')
 
       if (!hasUrl) {
         setUrlScoringPayload(null)
@@ -221,31 +254,53 @@ export default function Home() {
       return
     }
 
+    const trimmedText = jobDescription.trim()
+    const trimmedUrl = jobUrl.trim()
+    if (trimmedText && trimmedUrl) {
+      setErrorMessage('Please provide only one input at a time: either job text or job URL.')
+      return
+    }
+
+    if (!file) {
+      setErrorMessage('Please upload a PDF resume before continuing.')
+      return
+    }
+
+    const sourceKey = trimmedUrl ? 'url_input' : 'text_input'
+    const sourcePayload = jobInputMap.get(sourceKey)
+    const resolvedJobDescription =
+      sourcePayload?.job_description ||
+      sourcePayload?.final_extracted_text ||
+      jobDescriptionForResume
+
+    if (!resolvedJobDescription) {
+      setErrorMessage('Job description is missing. Please validate the posting again.')
+      return
+    }
+
     setErrorMessage('')
     setIsAnalyzing(true)
     showToast('Processing analysis', 'Preparing your dashboard insights.', 'info')
 
     try {
-      let resumeResult = null
-      if (file && jobDescriptionForResume) {
-        resumeResult = await matchResume({
-          resumeFile: file,
-          jobDescription: jobDescriptionForResume,
-          useLlm: true,
-          forceReparse: false,
-        })
-      }
+      const resumeResult = await matchResume({
+        resumeFile: file,
+        jobDescription: resolvedJobDescription,
+        useLlm: true,
+        forceReparse: false,
+      })
 
       const dashboardData = {
-        scamAnalysis: normalizeScoringResult(scoringPayload),
+        scamAnalysis: normalizeScoringResult(scoringPayload, urlScoringPayload?.extraction_confidence),
         companyVerification: normalizeCompanyData(urlScoringPayload),
         reviews: defaultReviewData,
-        resumeMatch: normalizeResumeData(resumeResult),
+        resumeMatch: resumeResult,
         apiMeta: {
           scoringTextUsed: Boolean(jobDescription.trim() && !jobUrl.trim()),
           scoringUrlUsed: Boolean(jobUrl.trim()),
-          resumeUsed: Boolean(file && jobDescriptionForResume),
+          resumeUsed: Boolean(file && resolvedJobDescription),
           warnings: urlScoringPayload?.warnings || [],
+          inputCache: Object.fromEntries(jobInputMap),
         },
       }
 
@@ -307,9 +362,6 @@ export default function Home() {
                 }}
               />
             </div>
-            {/* <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
-              Resume upload stays hidden until the API confirms <span className="font-semibold">is_job_posting=true</span>.
-            </div> */}
           </CardContent>
         </Card>
 
@@ -318,7 +370,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Step 2: Resume Upload</CardTitle>
             <CardDescription>
-              Job posting verified. Upload your resume (PDF/DOCX) to check compatibility.
+              Job posting verified. Upload your resume (PDF only) to check compatibility.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -327,7 +379,7 @@ export default function Home() {
                 type="file" 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx"
+                accept="application/pdf,.pdf"
               />
               <div className="flex flex-col items-center gap-2 text-center">
                 {file ? (

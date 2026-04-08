@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react"
 
 export function ScamDetector({ data }) {
-  const isSafe = data?.score < 30
-  const isSuspicious = data?.score >= 30 && data?.score < 70
+  const riskScore = Number(data?.score || 0)
+  const isSafe = riskScore < 30
+  const isSuspicious = riskScore >= 30 && riskScore < 70
   
   let statusColor = "text-green-500"
   let StatusIcon = CheckCircle
@@ -34,12 +35,12 @@ export function ScamDetector({ data }) {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Risk Score</span>
-              <span>{data?.score}%</span>
+              <span>{riskScore}%</span>
             </div>
             <div className="h-2 w-full rounded-full bg-secondary">
               <div 
                 className={`h-2 rounded-full ${isSafe ? 'bg-green-500' : isSuspicious ? 'bg-yellow-500' : 'bg-red-500'}`} 
-                style={{ width: `${data?.score}%` }}
+                style={{ width: `${riskScore}%` }}
               />
             </div>
           </div>

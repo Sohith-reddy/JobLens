@@ -58,14 +58,12 @@ async def resume_match(
     from core.scoring import evaluate_job_posting
 
     try:
-        # First, validate the job description
         logger.info("Validating job description...")
         jd_validation = evaluate_job_posting(
             text=job_description,
             model_path=DEFAULT_MODEL_PATH,
         )
 
-        # Check if it's not a job posting
         if not jd_validation.get("is_job_posting", True):
             logger.warning(f"JD validation failed: not a job posting - {jd_validation['final_reason']}")
             return JDValidationResponse(
@@ -74,7 +72,6 @@ async def resume_match(
                 final_label="NOT_JOB_POSTING",
             )
 
-        # Check if it's a scam
         if jd_validation.get("final_label") == "SCAM":
             logger.warning(f"JD validation failed: scam detected - {jd_validation['final_reason']}")
             return JDValidationResponse(
@@ -84,7 +81,6 @@ async def resume_match(
                 final_label="SCAM",
             )
 
-        # Check if it's suspicious (optional - you can remove this block if you want to allow suspicious JDs)
         if jd_validation.get("final_label") == "SUSPICIOUS":
             logger.warning(f"JD validation: suspicious posting - {jd_validation['final_reason']}")
             return JDValidationResponse(
@@ -96,7 +92,6 @@ async def resume_match(
 
         logger.info(f"JD validation passed: {jd_validation['final_label']}")
 
-        # Validate PDF file
         if not resume.filename or not resume.filename.lower().endswith(".pdf"):
             raise HTTPException(
                 status_code=400, detail="File must be a PDF (*.pdf)"
