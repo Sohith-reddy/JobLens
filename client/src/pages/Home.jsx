@@ -26,7 +26,7 @@ const defaultReviewData = {
 const defaultCompanyData = {
   isVerified: false,
   domainAge: 'Unknown',
-  onlinePresence: 'Not Available',
+  onlinePresence: 'Unknown',
 }
 
 function normalizeScoringResult(scoringResult, extractionConfidence = null) {
@@ -48,16 +48,16 @@ function normalizeScoringResult(scoringResult, extractionConfidence = null) {
     }
   }
 
-  const probability = Number(scoringResult.ml_probability || 0)
   const confidenceFromResult = Number(scoringResult.extraction_confidence)
   const confidenceFromPayload = Number(extractionConfidence)
   const hasConfidenceFromResult = Number.isFinite(confidenceFromResult)
   const hasConfidenceFromPayload = Number.isFinite(confidenceFromPayload)
-  const riskScore = hasConfidenceFromPayload
-    ? Math.round(confidenceFromPayload * 100)
+  const effectiveConfidence = hasConfidenceFromPayload
+    ? confidenceFromPayload
     : hasConfidenceFromResult
-    ? Math.round(confidenceFromResult * 100)
-    : Math.round(probability * 100)
+    ? confidenceFromResult
+    : 0
+  const riskScore = Math.round(effectiveConfidence * 100)
 
   return {
     verdict: scoringResult.final_label || 'Unknown',
@@ -76,7 +76,7 @@ function normalizeCompanyData(urlScoringResult) {
   return {
     isVerified: confidencePercent >= 70,
     domainAge: 'N/A',
-    onlinePresence: `${urlScoringResult.extraction_method} (${confidencePercent}% confidence)`,
+    onlinePresence: 'Unknown',
   }
 }
 

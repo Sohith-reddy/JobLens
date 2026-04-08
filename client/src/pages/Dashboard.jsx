@@ -16,7 +16,7 @@ const fallbackAnalysis = {
   companyVerification: {
     isVerified: false,
     domainAge: "Unknown",
-    onlinePresence: "Not Available",
+    onlinePresence: "Unknown",
   },
   reviews: {
     sentiment: "No Data",

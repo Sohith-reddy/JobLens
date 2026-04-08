@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react"
 
 export function ScamDetector({ data }) {
-  const riskScore = Number(data?.score || 0)
+  console.log(data);
+  const riskScore = Number(100-data?.score || 0)
   const isSafe = riskScore < 30
   const isSuspicious = riskScore >= 30 && riskScore < 70
   
