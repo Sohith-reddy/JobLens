@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Upload, FileText, Search, AlertCircle } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Upload, FileText, Search, AlertCircle, CheckCircle2, XCircle, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { scoreJobText, scoreJobUrl, matchResume } from '@/lib/joblensApi'
 
@@ -91,6 +98,52 @@ export default function Home() {
   const [file, setFile] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isJobPosting, setIsJobPosting] = useState(false)
+  const [scoringPayload, setScoringPayload] = useState(null)
+  const [urlScoringPayload, setUrlScoringPayload] = useState(null)
+  const [jobDescriptionForResume, setJobDescriptionForResume] = useState('')
+  const [showNotJobModal, setShowNotJobModal] = useState(false)
+  const [notJobMessage, setNotJobMessage] = useState('')
+  const [toast, setToast] = useState({
+    open: false,
+    title: '',
+    description: '',
+    variant: 'info',
+  })
+  const toastTimerRef = useRef(null)
+
+  const showToast = (title, description, variant = 'info') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current)
+    }
+
+    setToast({
+      open: true,
+      title,
+      description,
+      variant,
+    })
+
+    toastTimerRef.current = setTimeout(() => {
+      setToast((prev) => ({ ...prev, open: false }))
+    }, 2800)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current)
+      }
+    }
+  }, [])
+
+  const resetAnalysisState = () => {
+    setIsJobPosting(false)
+    setScoringPayload(null)
+    setUrlScoringPayload(null)
+    setJobDescriptionForResume('')
+    setFile(null)
+  }
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -98,54 +151,101 @@ export default function Home() {
     }
   }
 
-  const handleAnalyze = async () => {
-    if (!jobDescription.trim() && !jobUrl.trim()) {
+  const handleValidatePosting = async () => {
+    const trimmedText = jobDescription.trim()
+    const trimmedUrl = jobUrl.trim()
+
+    if (!trimmedText && !trimmedUrl) {
       setErrorMessage('Please provide either job text or a job URL to run analysis.')
+      return
+    }
+
+    if (trimmedText && trimmedUrl) {
+      setErrorMessage('Please provide only one input at a time: either job text or job URL.')
       return
     }
 
     setErrorMessage('')
     setIsAnalyzing(true)
+    showToast('Submitting job posting', 'Checking whether this content is a valid job posting.', 'info')
 
     try {
-      const hasText = Boolean(jobDescription.trim())
-      const hasUrl = Boolean(jobUrl.trim())
+      const hasUrl = Boolean(trimmedUrl)
 
-      const textPromise = hasText ? scoreJobText(jobDescription.trim()) : Promise.resolve(null)
-      const urlPromise = hasUrl ? scoreJobUrl(jobUrl.trim()) : Promise.resolve(null)
+      let selectedResult = null
+      let selectedUrlResult = null
 
-      const [textResult, urlResult] = await Promise.all([textPromise, urlPromise])
+      if (hasUrl) {
+        selectedUrlResult = await scoreJobUrl(trimmedUrl)
+        selectedResult = selectedUrlResult?.score_result || selectedUrlResult
+        setJobDescriptionForResume(selectedUrlResult?.final_extracted_text || '')
+      } else {
+        selectedResult = await scoreJobText(trimmedText)
+        setJobDescriptionForResume(trimmedText)
+      }
 
-      const primaryScoring =
-        (textResult && textResult.is_job_posting !== false && textResult) ||
-        (urlResult && urlResult.score_result) ||
-        textResult ||
-        urlResult ||
-        null
+      if (selectedResult?.is_job_posting === false) {
+        const responseMessage =
+          selectedResult?.message ||
+          selectedResult?.final_reason ||
+          'This content is not recognized as a job posting.'
 
-      const resumeInputDescription =
-        jobDescription.trim() || urlResult?.final_extracted_text || ''
+        setIsJobPosting(false)
+        setScoringPayload(null)
+        setUrlScoringPayload(null)
+        setNotJobMessage(responseMessage)
+        setShowNotJobModal(true)
+        showToast('Not a job posting', 'Please provide a valid job posting and try again.', 'error')
+        return
+      }
 
+      setIsJobPosting(true)
+      setScoringPayload(selectedResult)
+      setUrlScoringPayload(selectedUrlResult)
+      showToast('Valid job posting detected', 'Resume section is now unlocked.', 'success')
+
+      if (!hasUrl) {
+        setUrlScoringPayload(null)
+      }
+    } catch (error) {
+      setErrorMessage(error.message || 'Failed to analyze inputs. Please try again.')
+      showToast('Submission failed', error.message || 'Please try again.', 'error')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const handleAnalyze = async () => {
+    if (!isJobPosting || !scoringPayload) {
+      setErrorMessage('Please validate a job posting before running resume analysis.')
+      return
+    }
+
+    setErrorMessage('')
+    setIsAnalyzing(true)
+    showToast('Processing analysis', 'Preparing your dashboard insights.', 'info')
+
+    try {
       let resumeResult = null
-      if (file && resumeInputDescription) {
+      if (file && jobDescriptionForResume) {
         resumeResult = await matchResume({
           resumeFile: file,
-          jobDescription: resumeInputDescription,
+          jobDescription: jobDescriptionForResume,
           useLlm: true,
           forceReparse: false,
         })
       }
 
       const dashboardData = {
-        scamAnalysis: normalizeScoringResult(primaryScoring),
-        companyVerification: normalizeCompanyData(urlResult),
+        scamAnalysis: normalizeScoringResult(scoringPayload),
+        companyVerification: normalizeCompanyData(urlScoringPayload),
         reviews: defaultReviewData,
         resumeMatch: normalizeResumeData(resumeResult),
         apiMeta: {
-          scoringTextUsed: hasText,
-          scoringUrlUsed: hasUrl,
-          resumeUsed: Boolean(file && resumeInputDescription),
-          warnings: urlResult?.warnings || [],
+          scoringTextUsed: Boolean(jobDescription.trim() && !jobUrl.trim()),
+          scoringUrlUsed: Boolean(jobUrl.trim()),
+          resumeUsed: Boolean(file && jobDescriptionForResume),
+          warnings: urlScoringPayload?.warnings || [],
         },
       }
 
@@ -156,6 +256,7 @@ export default function Home() {
       })
     } catch (error) {
       setErrorMessage(error.message || 'Failed to analyze inputs. Please try again.')
+      showToast('Analysis failed', error.message || 'Please try again.', 'error')
     } finally {
       setIsAnalyzing(false)
     }
@@ -165,30 +266,32 @@ export default function Home() {
     <div className="container py-10 space-y-8">
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
-          Detect Fake Jobs & Match Your Resume
+          Verify The Job First, Then Match Your Resume
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          JobLens AI uses advanced algorithms to verify job authenticity and check your fit.
+          Step 1 validates that your input is a real job posting. Step 2 unlocks resume matching.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Job Description Section */}
+      <div className={`grid gap-6 ${isJobPosting ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
         <Card className="card-hover">
           <CardHeader>
-            <CardTitle>Job Description</CardTitle>
+            <CardTitle>Step 1: Job Posting Input</CardTitle>
             <CardDescription>
-              Paste the job description or URL to analyze for potential scams.
+              Enter either job text or a job URL. We will call the matching scoring endpoint.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="job-url">Job URL (Optional)</Label>
+              <Label htmlFor="job-url">Job URL</Label>
               <Input
                 id="job-url"
                 placeholder="https://linkedin.com/jobs/..."
                 value={jobUrl}
-                onChange={(e) => setJobUrl(e.target.value)}
+                onChange={(e) => {
+                  setJobUrl(e.target.value)
+                  resetAnalysisState()
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -198,18 +301,24 @@ export default function Home() {
                 placeholder="Paste the full job description here..."
                 className="min-h-[200px]"
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={(e) => {
+                  setJobDescription(e.target.value)
+                  resetAnalysisState()
+                }}
               />
             </div>
+            {/* <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">
+              Resume upload stays hidden until the API confirms <span className="font-semibold">is_job_posting=true</span>.
+            </div> */}
           </CardContent>
         </Card>
 
-        {/* Resume Upload Section */}
+        {isJobPosting && (
         <Card className="card-hover">
           <CardHeader>
-            <CardTitle>Your Resume</CardTitle>
+            <CardTitle>Step 2: Resume Upload</CardTitle>
             <CardDescription>
-              Upload your resume (PDF/DOCX) to check compatibility.
+              Job posting verified. Upload your resume (PDF/DOCX) to check compatibility.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -243,6 +352,7 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {errorMessage && (
@@ -251,22 +361,60 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex justify-center pt-6">
-        <Button 
-          size="lg" 
-          className="text-lg px-8 py-6 w-full md:w-auto" 
-          onClick={handleAnalyze} 
+      <div className="flex flex-col md:flex-row justify-center gap-4 pt-6">
+        <Button
+          size="lg"
+          className="text-lg px-8 py-6 w-full md:w-auto"
+          onClick={handleValidatePosting}
           disabled={isAnalyzing || (!jobDescription.trim() && !jobUrl.trim())}
         >
           {isAnalyzing ? (
-            <>Analyzing...</>
+            <>Validating...</>
           ) : (
             <>
-              <Search className="mr-2 h-5 w-5" /> Analyze Job & Resume
+              <Search className="mr-2 h-5 w-5" /> Validate Job Posting
             </>
           )}
         </Button>
+
+        {isJobPosting && (
+          <Button
+            size="lg"
+            className="text-lg px-8 py-6 w-full md:w-auto"
+            onClick={handleAnalyze}
+            disabled={isAnalyzing}
+          >
+            {isAnalyzing ? 'Analyzing...' : 'Continue To Dashboard'}
+          </Button>
+        )}
       </div>
+
+      <Dialog open={showNotJobModal} onOpenChange={setShowNotJobModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <XCircle className="h-5 w-5" /> Not a Job Posting
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm leading-relaxed">
+              {notJobMessage || 'The provided content was not identified as a job posting.'}
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {toast.open && (
+        <div className="fixed bottom-5 right-5 z-[70] w-[min(92vw,380px)] rounded-lg border bg-background p-4 shadow-xl">
+          <div className="flex items-start gap-3">
+            {toast.variant === 'success' && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+            {toast.variant === 'error' && <XCircle className="h-5 w-5 text-red-600" />}
+            {toast.variant === 'info' && <Info className="h-5 w-5 text-blue-600" />}
+            <div className="space-y-1">
+              <p className="text-sm font-semibold leading-none">{toast.title}</p>
+              <p className="text-sm text-muted-foreground">{toast.description}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

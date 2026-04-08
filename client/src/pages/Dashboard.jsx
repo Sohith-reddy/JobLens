@@ -50,22 +50,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Main Verdict - Spans 2 cols on LG */}
         <div className="lg:col-span-2">
             <ScamDetector data={data.scamAnalysis} />
         </div>
-
-        {/* Quick Stats */}
         <div className="space-y-6">
             <CompanyVerifier data={data.companyVerification} />
             <ResumeMatch data={data.resumeMatch} />
         </div>
       </div>
-      
-      {/* Additional Details */}
       <div className="grid gap-6 md:grid-cols-2">
         <ReviewSentiment data={data.reviews} />
-        {/* Placeholder for future detailed text analysis */}
       </div>
 
       {data.scamAnalysis?.reason && (

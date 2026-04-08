@@ -16,18 +16,12 @@ export function ProfileModal({ children, onLogout }) {
         {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[400px] p-0 gap-0 overflow-hidden border-none shadow-2xl bg-card text-card-foreground">
-        
-        {/* Header Background */}
         <div className="h-24 bg-gradient-to-r from-primary/80 to-purple-600/80 relative">
             <DialogClose className="absolute right-4 top-4 text-white/80 hover:text-white transition-colors">
-                {/* Close Icon handled by DialogContent default, just styling override if needed or invisible trigger */}
             </DialogClose>
         </div>
-
-        {/* Profile Info */}
         <div className="px-6 pb-6 -mt-10 relative">
             <div className="h-20 w-20 rounded-xl bg-background p-1 shadow-lg mb-3">
-                 {/* Avatar Placeholder */}
                  <div className="h-full w-full rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-slate-800 flex items-center justify-center text-2xl font-bold text-primary">
                     UN
                  </div>
@@ -53,8 +47,6 @@ export function ProfileModal({ children, onLogout }) {
                     <Calendar className="h-3 w-3" /> Joined Feb 2024
                 </div>
             </div>
-
-            {/* Stats / Skills Quick View */}
             <div className="mt-6 space-y-4">
                 <div className="flex justify-between items-center text-sm font-medium">
                     <span>Profile Completion</span>
@@ -73,8 +65,6 @@ export function ProfileModal({ children, onLogout }) {
                     </div>
                 </div>
             </div>
-
-            {/* Footer Actions */}
             <div className="mt-8 flex flex-col gap-2">
                 <DialogClose asChild>
                     <Link to="/profile" className="w-full">
