@@ -77,14 +77,24 @@ JobLens/
 
 The frontend provides the end-user workflow:
 
-- Submit job postings as **text** or **URL**
-- Upload resume (UI accepts PDF/DOC/DOCX; backend processes PDF)
+- Submit job postings as **text** or **URL** (exactly one input at a time)
+- Validate posting first, then upload resume in the second step
+- Upload resume (**PDF only** in current UI flow)
 - View analysis report in dashboard cards:
-  - Fraud Verdict + risk score + rule flags
-  - Company extraction confidence metadata
-  - Resume compatibility score + missing skills
+  - Fraud Verdict + risk score (derived from `extraction_confidence * 100`) + rule flags
+  - Company verification metadata (trust score currently shown as `Unknown` until API support is added)
+  - Detailed resume compatibility and credibility insights
   - API warnings and decision rationale
 - Browse in-app Docs page with live backend health/rules metadata
+- Use a sticky Docs table of contents with active-section highlighting while scrolling
+
+### Frontend Codebase Notes
+
+- `client/src/pages/Home.jsx`: Two-step validation + resume upload flow, API payload preparation
+- `client/src/pages/Dashboard.jsx`: Report layout with Fraud, Resume Match, Company Verification, and review cards
+- `client/src/components/dashboard/ResumeMatch.jsx`: Detailed rendering of fit score, credibility, suggestions, and timings
+- `client/src/lib/joblensApi.js`: API client wrappers for `/scoring/*`, `/resume/match`, `/health`, `/rules`
+- `client/src/pages/Docs.jsx`: Codebase overview + API health/rules metadata + scroll-aware active TOC links
 
 ### Frontend Routes
 
@@ -175,7 +185,7 @@ npm install
 |---|---|---|
 | `/scoring/text` | POST | Score job posting text (plain text body) |
 | `/scoring/url` | POST | Scrape URL and score extracted posting |
-| `/resume/match` | POST | Upload PDF resume + JD and get match analysis |
+| `/resume/match` | POST | Upload PDF resume + job description and get match analysis |
 | `/resume/cache` | DELETE | Clear resume parse cache (optional `candidate_id`) |
 | `/health` | GET | Health check |
 | `/rules` | GET | List configured scam-detection rules |

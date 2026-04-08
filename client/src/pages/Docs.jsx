@@ -7,10 +7,12 @@ export default function Docs() {
     const [health, setHealth] = useState(null)
     const [rulesResponse, setRulesResponse] = useState(null)
     const [apiError, setApiError] = useState("")
+    const [activeSection, setActiveSection] = useState("introduction")
 
   const sections = [
     { id: "introduction", title: "Introduction" },
-        { id: "api-status", title: "API Status" },
+    { id: "codebase", title: "Codebase" },
+    { id: "api-status", title: "API Status" },
     { id: "features", title: "Key Features" },
     { id: "usage", title: "How to Use" },
     { id: "privacy", title: "Privacy & Safety" },
@@ -47,6 +49,41 @@ export default function Docs() {
         }
     }, [])
 
+    useEffect(() => {
+        const sectionIds = sections.map((section) => section.id)
+        const sectionElements = sectionIds
+            .map((id) => document.getElementById(id))
+            .filter(Boolean)
+
+        if (!sectionElements.length) {
+            return
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visibleEntries = entries
+                    .filter((entry) => entry.isIntersecting)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+
+                if (visibleEntries.length > 0) {
+                    setActiveSection(visibleEntries[0].target.id)
+                }
+            },
+            {
+                root: null,
+                rootMargin: "-30% 0px -55% 0px",
+                threshold: [0.1, 0.3, 0.6],
+            }
+        )
+
+        sectionElements.forEach((element) => observer.observe(element))
+
+        return () => {
+            sectionElements.forEach((element) => observer.unobserve(element))
+            observer.disconnect()
+        }
+    }, [sections])
+
   return (
     <div className="container py-10 flex flex-col md:flex-row gap-8">
       <aside className="md:w-64 flex-shrink-0 hidden md:block">
@@ -57,7 +94,11 @@ export default function Docs() {
                     <a 
                         key={section.id} 
                         href={`#${section.id}`} 
-                        className="hover:text-primary hover:underline transition-colors block py-1"
+                        className={`transition-colors block py-1 ${
+                            activeSection === section.id
+                                ? "text-primary font-semibold underline"
+                                : "hover:text-primary hover:underline"
+                        }`}
                     >
                         {section.title}
                     </a>
@@ -72,6 +113,54 @@ export default function Docs() {
             <p className="text-xl text-muted-foreground">
                 Welcome to JobLens AI. This guide will help you understand how to use our tools to verify jobs and analyze your resume.
             </p>
+        </section>
+
+        <section id="codebase" className="space-y-4 pt-8">
+            <h2 className="text-2xl font-bold border-b pb-2">Codebase</h2>
+            <p className="text-muted-foreground">
+                JobLens AI is organized as a React frontend and a FastAPI backend. The frontend handles input,
+                validation, and visualization, while the backend provides scoring, scraping, and resume analysis APIs.
+            </p>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Frontend (client)</CardTitle>
+                        <CardDescription>React + Vite + Tailwind application layer</CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2 text-muted-foreground">
+                        <p>• <span className="font-medium text-foreground">pages/</span>: Home, Dashboard, Docs, Auth screens</p>
+                        <p>• <span className="font-medium text-foreground">components/dashboard/</span>: Fraud, Company, Resume and review widgets</p>
+                        <p>• <span className="font-medium text-foreground">lib/joblensApi.js</span>: API client for scoring, resume match, health, and rules</p>
+                        <p>• Home uses a 2-step flow: validate posting first, then unlock resume analysis</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Backend (server)</CardTitle>
+                        <CardDescription>FastAPI services and ML/rule engines</CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm space-y-2 text-muted-foreground">
+                        <p>• <span className="font-medium text-foreground">api/routes/</span>: REST endpoints for scoring, resume, and system metadata</p>
+                        <p>• <span className="font-medium text-foreground">core/scoring/</span>: Rule + ML scoring logic</p>
+                        <p>• <span className="font-medium text-foreground">core/scraping/</span>: URL extraction and fallback strategies</p>
+                        <p>• <span className="font-medium text-foreground">core/matching/</span>: Resume parsing and fit/credibility scoring</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Current App Behavior</CardTitle>
+                    <CardDescription>Important implementation details used in the UI</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground space-y-2">
+                    <p>• Fraud risk score in dashboard is derived from <span className="font-medium text-foreground">extraction_confidence × 100</span>.</p>
+                    <p>• Company trust score is currently shown as <span className="font-medium text-foreground">Unknown</span> until trust APIs are implemented.</p>
+                    <p>• Resume uploads are restricted to <span className="font-medium text-foreground">PDF only</span> in the current frontend flow.</p>
+                </CardContent>
+            </Card>
         </section>
 
                 <section id="api-status" className="space-y-4 pt-8">
@@ -148,7 +237,7 @@ export default function Docs() {
                         <CardTitle className="text-base">🏢 Company Verification</CardTitle>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">
-                        We check domain age, online presence, and employee reviews to verify if a company is legitimate.
+                        We currently show extraction metadata and verification state. Trust score is displayed as Unknown until dedicated trust APIs are added.
                     </CardContent>
                 </Card>
                 <Card>
@@ -167,10 +256,11 @@ export default function Docs() {
             <div className="prose dark:prose-invert max-w-none">
                 <ol className="list-decimal list-inside space-y-2">
                     <li><strong>Sign In</strong>: Create an account or log in to access the dashboard.</li>
-                    <li><strong>Paste Job Description</strong>: Copy the text from any job board (LinkedIn, Indeed, etc.) into the input field on the home page.</li>
-                    <li><strong>Upload Resume</strong>: Drag and drop your PDF resume into the upload zone.</li>
-                    <li><strong>Analyze</strong>: Click the "Analyze" button.</li>
-                    <li><strong>Review Results</strong>: Check the Dashboard for the Risk Score, Company Verification, and Resume Match percentage.</li>
+                    <li><strong>Provide One Job Input</strong>: Enter either a job URL or job description text (not both).</li>
+                    <li><strong>Validate Posting</strong>: Run validation first. Resume upload unlocks only when it is a valid job posting.</li>
+                    <li><strong>Upload Resume (PDF)</strong>: Add your resume using PDF format.</li>
+                    <li><strong>Analyze</strong>: Continue to dashboard after resume analysis completes.</li>
+                    <li><strong>Review Results</strong>: Check risk score, company verification, and detailed resume-fit insights.</li>
                 </ol>
             </div>
         </section>
