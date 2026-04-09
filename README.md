@@ -1,44 +1,92 @@
 # JobLens AI
 
-JobLens AI is a full-stack application for:
-- Detecting potentially fraudulent job postings using ML + rule-based scoring
-- Matching resumes against job descriptions with actionable feedback
-- Providing a modern React dashboard for analysis workflows
+JobLens AI is a full-stack platform that helps job seekers and teams:
+- detect potentially fraudulent job postings using ML + rule-based scoring
+- evaluate resume-to-job fit with structured feedback
+- review results in a modern React dashboard
 
 ---
 
 ## Table of Contents
 - [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Frontend (UI)](#frontend-ui)
-- [Backend (API)](#backend-api)
-- [Setup](#setup)
+- [Core Capabilities](#core-capabilities)
+- [Architecture and Project Structure](#architecture-and-project-structure)
+- [Authentication (Supabase)](#authentication-supabase)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
 - [API Endpoints](#api-endpoints)
-- [Environment Variables](#environment-variables)
-- [Run in Development](#run-in-development)
-- [API Docs](#api-docs)
+- [Development Runbook](#development-runbook)
+- [Documentation and Support](#documentation-and-support)
 
 ---
 
 ## Overview
 
-JobLens combines a React frontend and a FastAPI backend:
-
-- **UI Layer**: Collects job text/URL + resume upload, then displays scam verdicts, warnings, and resume-fit insights.
-- **Scam Detection Engine**: Uses SentenceTransformer embeddings + Logistic Regression with a configurable rule engine and gate logic.
-- **Resume Matching Engine**: Parses PDF resumes, computes fit/credibility scores, and returns improvement suggestions.
+JobLens combines a React frontend (`client/`) and a FastAPI backend (`server/`) to deliver an end-to-end analysis workflow:
+1. validate and score job postings (text or URL)
+2. upload a resume for compatibility and credibility analysis
+3. view actionable insights and warnings in a dashboard
 
 ---
 
-## Tech Stack
+## Core Capabilities
+
+- **Scam Detection Engine**: Ensemble of SentenceTransformer + Logistic Regression + weighted rule engine
+- **Resume Matching**: PDF resume parsing, fit scoring, credibility scoring, and improvement suggestions
+- **URL Intelligence**: Multi-stage extraction pipeline for job descriptions from live URLs
+- **Operational Endpoints**: Health and rule metadata endpoints for product observability
+
+---
+
+## Architecture and Project Structure
+
+```text
+JobLens/
+├── client/                        # React + Vite frontend
+│   ├── src/
+│   │   ├── components/            # Shared UI and layout components
+│   │   ├── pages/                 # Home, Dashboard, Docs, Profile, Auth pages
+│   │   └── lib/                   # API/auth clients and shared utilities
+│   └── README.md
+├── server/                        # FastAPI backend
+│   ├── api/                       # Application factory, routes, schema models
+│   ├── core/                      # Scoring, parsing, scraping, matching logic
+│   ├── data/                      # Trained model and datasets
+│   ├── scripts/                   # Training/inference helper scripts
+│   └── README.md
+└── README.md
+```
+
+---
+
+## Authentication (Supabase)
+
+Login and signup in the frontend are integrated with **Supabase Auth** (`@supabase/supabase-js`):
+- `client/src/lib/supabaseClient.js` initializes the Supabase client
+- `client/src/pages/auth/Login.jsx` authenticates users with `signInWithPassword`
+- `client/src/pages/auth/Signup.jsx` handles account creation
+
+If Supabase variables are missing, the UI shows a clear configuration error instead of silently failing.
+
+Required frontend environment variables:
+
+```bash
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+---
+
+## Technology Stack
 
 ### Frontend
 - React 18
 - Vite
 - Tailwind CSS
 - React Router
-- Radix UI primitives + custom UI components
+- Radix UI primitives
+- Supabase JavaScript SDK
 
 ### Backend
 - Python 3.9+
@@ -47,127 +95,18 @@ JobLens combines a React frontend and a FastAPI backend:
 - scikit-learn
 - PyMuPDF / pdfminer.six
 - BeautifulSoup + readability-lxml
-- Playwright (optional fallback for JS-heavy pages)
 
 ---
 
-## Project Structure
-
-```text
-JobLens/
-├── client/                    # React + Vite frontend
-│   ├── src/
-│   │   ├── pages/             # Home, Dashboard, Docs, Auth, etc.
-│   │   ├── components/        # UI/layout/dashboard components
-│   │   └── lib/joblensApi.js  # Frontend API client
-│   └── README.md
-├── server/                    # FastAPI backend
-│   ├── api/                   # App factory, routes, models, services, config
-│   ├── core/                  # Scoring, scraping, parsing, matching, clients
-│   ├── data/                  # Models/cache/datasets
-│   ├── scripts/               # Training and helper scripts
-│   ├── app.py                 # Backend entrypoint
-│   └── README.md
-└── README.md                  # This file
-```
-
----
-
-## Frontend (UI)
-
-The frontend provides the end-user workflow:
-
-- Submit job postings as **text** or **URL** (exactly one input at a time)
-- Validate posting first, then upload resume in the second step
-- Upload resume (**PDF only** in current UI flow)
-- View analysis report in dashboard cards:
-  - Fraud Verdict + risk score (derived from `extraction_confidence * 100`) + rule flags
-  - Company verification metadata (trust score currently shown as `Unknown` until API support is added)
-  - Detailed resume compatibility and credibility insights
-  - API warnings and decision rationale
-- Browse in-app Docs page with live backend health/rules metadata
-- Use a sticky Docs table of contents with active-section highlighting while scrolling
-
-### Frontend Codebase Notes
-
-- `client/src/pages/Home.jsx`: Two-step validation + resume upload flow, API payload preparation
-- `client/src/pages/Dashboard.jsx`: Report layout with Fraud, Resume Match, Company Verification, and review cards
-- `client/src/components/dashboard/ResumeMatch.jsx`: Detailed rendering of fit score, credibility, suggestions, and timings
-- `client/src/lib/joblensApi.js`: API client wrappers for `/scoring/*`, `/resume/match`, `/health`, `/rules`
-- `client/src/pages/Docs.jsx`: Codebase overview + API health/rules metadata + scroll-aware active TOC links
-
-### Frontend Routes
-
-- `/` and `/about` – About page
-- `/analyze` – Input page for job + resume analysis
-- `/dashboard` – Result view
-- `/docs` – Product/API info pulled from backend metadata
-- `/plans`, `/profile`, `/login`, `/signup`
-
-### Frontend API Integration
-
-By default, the client calls:
-
-`http://localhost:8000`
-
-Overridable via:
-
-```bash
-VITE_JOBLENS_API_BASE_URL=http://your-api-host:8000
-```
-
----
-
-## Backend (API)
-
-Backend documentation is based on and consolidated from `server/README.md`.
-
-### Core Features
-
-- **ML Model**: SentenceTransformer embeddings (`all-mpnet-base-v2`) + Logistic Regression
-- **Rule Engine**: 20+ configurable detection rules
-- **Gate Logic**: Critical rules can override ML output; ensemble-based final label
-- **URL Scraping**: Multi-strategy extraction from job URLs
-- **Resume Matching**: PDF parsing, fit/credibility scoring, and suggestions
-- **Optional LLM Integration**: Groq API for enhanced parsing/rewrite quality
-- **REST API**: Endpoints for scoring, resume matching, health, and rules
-
-### URL Scraping Strategy
-
-1. HTTP + readability-lxml fast path  
-2. BeautifulSoup heuristic fallback  
-3. Playwright rendering for JS-heavy pages (optional but supported)
-
-### Security Controls
-
-- URL scheme validation (`http`/`https`)
-- SSRF protection for private/internal ranges
-- Response size limits
-- Request timeout controls
-
-### Ensemble Decision Logic
-
-1. Critical rule hit → `SCAM`
-2. High ML probability → `SCAM`
-3. Mid ML probability + rule score threshold → `SUSPICIOUS`
-4. Otherwise → `LEGIT`
-
----
-
-## Setup
+## Getting Started
 
 ### 1) Backend setup
 
 ```bash
 cd /home/runner/work/JobLens/JobLens/server
-
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
 pip install -r requirements.txt
-
-# Optional (for JS-heavy URL extraction fallback)
-playwright install chromium
 ```
 
 ### 2) Frontend setup
@@ -179,34 +118,20 @@ npm install
 
 ---
 
-## API Endpoints
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/scoring/text` | POST | Score job posting text (plain text body) |
-| `/scoring/url` | POST | Scrape URL and score extracted posting |
-| `/resume/match` | POST | Upload PDF resume + job description and get match analysis |
-| `/resume/cache` | DELETE | Clear resume parse cache (optional `candidate_id`) |
-| `/health` | GET | Health check |
-| `/rules` | GET | List configured scam-detection rules |
-
----
-
-## Environment Variables
+## Configuration
 
 ### Frontend
 
 ```bash
 VITE_JOBLENS_API_BASE_URL=http://localhost:8000
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-### Backend
+### Backend (optional)
 
 ```bash
-# Optional LLM support
 GROQ_API_KEY=your-groq-api-key
-
-# Optional overrides
 MODEL_PATH=/absolute/path/to/job_scam_model.joblib
 HOST=0.0.0.0
 PORT=8000
@@ -214,7 +139,20 @@ PORT=8000
 
 ---
 
-## Run in Development
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/scoring/text` | POST | Score a job posting from plain text body |
+| `/scoring/url` | POST | Scrape and score a job posting URL |
+| `/resume/match` | POST | Upload resume PDF + job description for matching |
+| `/resume/cache` | DELETE | Clear cached resume parsing results |
+| `/health` | GET | Service health check |
+| `/rules` | GET | Detection rules and metadata |
+
+---
+
+## Development Runbook
 
 Start backend:
 
@@ -231,12 +169,11 @@ cd /home/runner/work/JobLens/JobLens/client
 npm run dev
 ```
 
-Then open the Vite URL shown in terminal (typically `http://localhost:5173`).
-
 ---
 
-## API Docs
+## Documentation and Support
 
-Once backend is running:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- API docs (when backend is running):
+  - Swagger UI: `http://localhost:8000/docs`
+  - ReDoc: `http://localhost:8000/redoc`
+- For issues, feature requests, or contribution discussions, please open an issue in this repository.
