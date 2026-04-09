@@ -4,12 +4,17 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { UserCircle, Save, MapPin, Briefcase, Plus, X, Upload } from "lucide-react"
+import { UserCircle, Save, Plus, X, Upload, Mail, Calendar, Clock, ShieldCheck } from "lucide-react"
+import { getAuthUserInfo } from "@/lib/authUser"
 
-export default function Profile() {
+export default function Profile({ authUser }) {
+    const profile = getAuthUserInfo(authUser)
   const [skills, setSkills] = useState(["React", "Node.js", "Python", "Job Analysis", "System Design"])
   const [newSkill, setNewSkill] = useState("")
   const [photo, setPhoto] = useState(null)
+    const [firstName, setFirstName] = useState(profile.displayName.split(" ")[0] || "")
+    const [lastName, setLastName] = useState(profile.displayName.split(" ").slice(1).join(" "))
+    const [bio, setBio] = useState("")
   const fileInputRef = useRef(null)
 
   const handleAddSkill = () => {
@@ -49,7 +54,7 @@ export default function Profile() {
                         {photo ? (
                             <img src={photo} alt="Profile" className="h-full w-full rounded-full object-cover" />
                         ) : (
-                            <UserCircle className="h-24 w-24" />
+                            <span className="text-4xl font-bold">{profile.initials}</span>
                         )}
                         <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={triggerFileInput}>
                             <Upload className="h-8 w-8 text-white" />
@@ -62,15 +67,21 @@ export default function Profile() {
                             onChange={handlePhotoUpload}
                         />
                     </div>
-                    <CardTitle>User Name</CardTitle>
-                    <CardDescription>Software Engineer</CardDescription>
+                    <CardTitle>{profile.displayName}</CardTitle>
+                    <CardDescription>@{profile.username}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-sm text-left space-y-2">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4" /> San Francisco, CA
+                        <Mail className="h-4 w-4" /> {profile.email}
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <Briefcase className="h-4 w-4" /> Tech Corp Inc.
+                        <Calendar className="h-4 w-4" /> Joined {profile.joinedAt}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="h-4 w-4" /> Last login {profile.lastLoginAt}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <ShieldCheck className="h-4 w-4" /> {profile.emailConfirmed ? "Email verified" : "Email not verified"}
                     </div>
                 </CardContent>
             </Card>
@@ -110,30 +121,49 @@ export default function Profile() {
             <Card className="card-hover">
                 <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>Update your personal details here.</CardDescription>
+                    <CardDescription>Account details from your current session.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>
-                            <Input id="firstName" defaultValue="User" />
+                            <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="lastName">Last Name</Label>
-                            <Input id="lastName" defaultValue="Name" />
+                            <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" defaultValue="user@example.com" />
+                        <Input id="email" type="email" value={profile.email} readOnly />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="provider">Auth Provider</Label>
+                            <Input id="provider" value={profile.provider.toUpperCase()} readOnly />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="userId">User ID</Label>
+                            <Input id="userId" value={profile.userId} readOnly />
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="bio">Bio</Label>
-                        <Textarea id="bio" placeholder="Tell us about yourself..." className="min-h-[120px]" />
+                        <Textarea
+                          id="bio"
+                          placeholder="Tell us about yourself..."
+                          className="min-h-[120px]"
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                        />
                     </div>
                 </CardContent>
                 <CardFooter className="justify-end">
-                    <Button>Save Changes</Button>
+                    <Button>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
                 </CardFooter>
             </Card>
 

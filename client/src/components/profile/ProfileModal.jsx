@@ -5,11 +5,14 @@ import {
   DialogClose
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { User, LogOut, Settings, Award, Calendar, ExternalLink, MapPin } from "lucide-react"
+import { User, LogOut, Settings, Calendar, ExternalLink, Mail, Clock, BadgeCheck } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Progress } from "@/components/ui/progress" 
+import { getAuthUserInfo } from "@/lib/authUser"
 
-export function ProfileModal({ children, onLogout }) {
+export function ProfileModal({ children, onLogout, authUser }) {
+    const profile = getAuthUserInfo(authUser)
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -23,45 +26,51 @@ export function ProfileModal({ children, onLogout }) {
         <div className="px-6 pb-6 -mt-10 relative">
             <div className="h-20 w-20 rounded-xl bg-background p-1 shadow-lg mb-3">
                  <div className="h-full w-full rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-slate-800 flex items-center justify-center text-2xl font-bold text-primary">
-                    UN
+                    {profile.initials}
                  </div>
             </div>
             
             <div className="flex justify-between items-start">
                 <div>
-                    <h2 className="text-xl font-bold truncate">User Name</h2>
-                    <p className="text-sm text-muted-foreground">@username</p>
+                    <h2 className="text-xl font-bold truncate">{profile.displayName}</h2>
+                    <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 </div>
                 <div className="text-right">
                     <div className="inline-flex items-center rounded-md border border-transparent bg-secondary px-2 py-1 text-xs font-semibold text-secondary-foreground">
-                        Rank 120
+                        {profile.provider.toUpperCase()} Auth
                     </div>
                 </div>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-y-2 gap-x-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> San Francisco
+                    <Mail className="h-3 w-3" /> {profile.email}
                 </div>
                 <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Joined Feb 2024
+                    <Calendar className="h-3 w-3" /> Joined {profile.joinedAt}
+                </div>
+                <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Last login {profile.lastLoginAt}
+                </div>
+                <div className="flex items-center gap-1">
+                    <BadgeCheck className="h-3 w-3" /> {profile.emailConfirmed ? "Email verified" : "Email not verified"}
                 </div>
             </div>
             <div className="mt-6 space-y-4">
                 <div className="flex justify-between items-center text-sm font-medium">
                     <span>Profile Completion</span>
-                    <span className="text-primary">85%</span>
+                    <span className="text-primary">90%</span>
                 </div>
-                <Progress value={85} className="h-2" />
+                <Progress value={90} className="h-2" />
                 
                 <div className="grid grid-cols-2 gap-3 mt-4">
                     <div className="bg-secondary/30 rounded-lg p-3 text-center transition-colors hover:bg-secondary/50">
-                        <div className="text-lg font-bold text-foreground">14</div>
-                        <div className="text-xs text-muted-foreground">Scans</div>
+                        <div className="text-lg font-bold text-foreground">{profile.userId.slice(0, 8)}</div>
+                        <div className="text-xs text-muted-foreground">User ID</div>
                     </div>
                     <div className="bg-secondary/30 rounded-lg p-3 text-center transition-colors hover:bg-secondary/50">
-                        <div className="text-lg font-bold text-foreground">6</div>
-                        <div className="text-xs text-muted-foreground">Verified</div>
+                        <div className="text-lg font-bold text-foreground">{profile.provider.toUpperCase()}</div>
+                        <div className="text-xs text-muted-foreground">Provider</div>
                     </div>
                 </div>
             </div>
