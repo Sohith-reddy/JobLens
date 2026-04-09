@@ -248,7 +248,6 @@ export default function Profile({ authUser }) {
                             onChange={handlePhotoUpload}
                         />
                     </div>
-                    <p className="text-xs text-muted-foreground">Click image to upload to your `profilepics` bucket.</p>
                     <CardTitle>{profile.displayName}</CardTitle>
                     <CardDescription>@{profile.username}</CardDescription>
                 </CardHeader>
