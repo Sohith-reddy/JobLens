@@ -19,12 +19,11 @@ export function ChatWidget() {
     
     setMessages([...messages, { id: Date.now(), text: input, sender: "user" }])
     setInput("")
-    
-    // Simulate bot response
     setTimeout(() => {
         setMessages(prev => [...prev, { 
             id: Date.now() + 1, 
-            text: "I'm a demo bot. I can't analyze real jobs yet, but the main dashboard can!", 
+            // text: "I'm a demo bot. I can't analyze real jobs yet, but the main dashboard can!", 
+            text:"Laka Laka Laka 😎",
             sender: "bot" 
         }])
     }, 1000)
@@ -32,7 +31,6 @@ export function ChatWidget() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
-      {/* Chat Window */}
       <div
         className={cn(
           "transition-all duration-300 ease-in-out origin-bottom-right",
@@ -83,8 +81,6 @@ export function ChatWidget() {
             </CardFooter>
         </Card>
       </div>
-
-      {/* Floating Action Button */}
       <Button
         size="icon"
         className={cn(
