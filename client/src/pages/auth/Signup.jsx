@@ -2,76 +2,140 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useState } from "react"
+import { getSupabaseClient, hasSupabaseConfig } from "@/lib/supabaseClient"
 
-export default function Signup() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const onSignup = () => {
-    console.log("Signup");
-    console.log(email, password);
+export default function Signup({ onLogin }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
+
+  const handleSignup = async (event) => {
+    event.preventDefault()
+    setErrorMessage("")
+    setSuccessMessage("")
+
+    if (!hasSupabaseConfig) {
+      setErrorMessage("Supabase config is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in client/.env.")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.")
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const client = getSupabaseClient()
+      const { data, error } = await client.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      })
+
+      if (error) {
+        setErrorMessage(error.message)
+        return
+      }
+
+      if (data.session) {
+        if (onLogin) {
+          onLogin()
+        }
+      } else {
+        setSuccessMessage("Account created. Please check your email to confirm your account before signing in.")
+      }
+    } catch (error) {
+      setErrorMessage(error.message || "Failed to create account. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
+
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-      <Card className="w-full max-w-md border-primary/20 shadow-lg shadow-primary/5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden px-4 py-10">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_5%_10%,hsl(var(--primary)/0.18),transparent_40%),radial-gradient(circle_at_90%_10%,hsl(190_90%_45%/0.17),transparent_34%),linear-gradient(145deg,hsl(var(--background))_0%,hsl(var(--secondary)/0.38)_100%)]" />
+      <div className="pointer-events-none absolute -left-20 bottom-0 -z-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-4 -z-10 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+
+      <div className="mx-auto flex w-full max-w-lg flex-col items-center justify-center gap-4">
+        <div className="text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">JobLens AI</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Create your account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Start analyzing opportunities with a secure account.</p>
+        </div>
+
+        <Card className="w-full border-primary/20 bg-card/95 shadow-xl shadow-primary/10 backdrop-blur">
+          <CardHeader className="space-y-1 pb-3">
+            <CardTitle className="text-xl font-semibold tracking-tight">Sign up</CardTitle>
           <CardDescription>
             Enter your email below to create your account
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid grid-cols-2 gap-6">
-            <Button variant="outline">
-              <Github className="mr-2 h-4 w-4" />
-              Github
-            </Button>
-            <Button variant="outline">
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Google
-            </Button>
-          </div>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
+        <form onSubmit={handleSignup}>
+          <CardContent className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="m@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              required
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" />
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={6}
+            />
           </div>
-        </CardContent>
-        <CardFooter>
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={6}
+            />
+          </div>
+          {/* <p className="text-xs text-muted-foreground">
+            Passwords are securely hashed by Supabase Auth before storage.
+          </p> */}
+          {errorMessage ? (
+            <p className="text-sm text-red-500" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+          {successMessage ? (
+            <p className="text-sm text-green-600" role="status">
+              {successMessage}
+            </p>
+          ) : null}
+          </CardContent>
+        <CardFooter className="pt-1">
             <div className="flex flex-col w-full gap-4">
-                <Button className="w-full" onClick={onSignup()}>Sign Up</Button>
+                <Button className="w-full" type="submit" disabled={isLoading}>
+                  {isLoading ? "Creating account..." : "Sign Up"}
+                </Button>
                 <p className="text-center text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <Link to="/login" className="underline underline-offset-4 hover:text-primary">
@@ -80,7 +144,9 @@ export default function Signup() {
                 </p>
             </div>
         </CardFooter>
-      </Card>
+        </form>
+        </Card>
+      </div>
     </div>
   )
 }

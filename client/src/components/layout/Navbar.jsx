@@ -5,7 +5,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { ProfileModal } from '@/components/profile/ProfileModal'
 import { cn } from "@/lib/utils"
 
-export function Navbar({ onLogout }) {
+export function Navbar({ onLogout, authUser }) {
   const location = useLocation()
   
   const navItems = [
@@ -53,7 +53,7 @@ export function Navbar({ onLogout }) {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <div className="hidden sm:flex items-center gap-2">
-            <ProfileModal onLogout={onLogout}>
+            <ProfileModal onLogout={onLogout} authUser={authUser}>
                 <Button size="icon" variant="ghost" className="rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
                     <User className="h-5 w-5" />
                 </Button>
