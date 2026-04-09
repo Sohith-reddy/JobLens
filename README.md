@@ -116,6 +116,8 @@ cd /home/runner/work/JobLens/JobLens/client
 npm install
 ```
 
+> After setup, configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` before using login/signup. See [Configuration](#configuration).
+
 ---
 
 ## Configuration
@@ -128,7 +130,7 @@ VITE_SUPABASE_URL=your-supabase-project-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-### Backend (optional)
+### Backend Environment Variables (optional)
 
 ```bash
 GROQ_API_KEY=your-groq-api-key
