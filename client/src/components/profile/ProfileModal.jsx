@@ -9,9 +9,50 @@ import { User, LogOut, Settings, Calendar, ExternalLink, Mail, Clock, BadgeCheck
 import { Link } from "react-router-dom"
 import { Progress } from "@/components/ui/progress" 
 import { getAuthUserInfo } from "@/lib/authUser"
+import { getSupabaseClient, hasSupabaseConfig } from "@/lib/supabaseClient"
+import { useEffect, useState } from "react"
 
 export function ProfileModal({ children, onLogout, authUser }) {
     const profile = getAuthUserInfo(authUser)
+    const [avatarUrl, setAvatarUrl] = useState(null)
+
+    useEffect(() => {
+        const loadAvatar = async () => {
+            if (!authUser || !hasSupabaseConfig) {
+                setAvatarUrl(null)
+                return
+            }
+
+            try {
+                const client = getSupabaseClient()
+                const { data, error } = await client
+                    .from("user_profiles")
+                    .select("avatar_url, avatar_storage_path")
+                    .eq("user_id", authUser.id)
+                    .maybeSingle()
+
+                if (error || !data) {
+                    setAvatarUrl(null)
+                    return
+                }
+
+                if (data.avatar_storage_path) {
+                    const { data: signedData } = await client.storage
+                        .from("profilepics")
+                        .createSignedUrl(data.avatar_storage_path, 60 * 60 * 24 * 30)
+
+                    setAvatarUrl(signedData?.signedUrl || data.avatar_url || null)
+                    return
+                }
+
+                setAvatarUrl(data.avatar_url || null)
+            } catch {
+                setAvatarUrl(null)
+            }
+        }
+
+        loadAvatar()
+    }, [authUser])
 
   return (
     <Dialog>
@@ -26,7 +67,11 @@ export function ProfileModal({ children, onLogout, authUser }) {
         <div className="px-6 pb-6 -mt-10 relative">
             <div className="h-20 w-20 rounded-xl bg-background p-1 shadow-lg mb-3">
                  <div className="h-full w-full rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-slate-800 flex items-center justify-center text-2xl font-bold text-primary">
-                    {profile.initials}
+                                        {avatarUrl ? (
+                                            <img src={avatarUrl} alt="Profile" className="h-full w-full rounded-lg object-cover" />
+                                        ) : (
+                                            profile.initials
+                                        )}
                  </div>
             </div>
             

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -6,16 +6,85 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { UserCircle, Save, Plus, X, Upload, Mail, Calendar, Clock, ShieldCheck } from "lucide-react"
 import { getAuthUserInfo } from "@/lib/authUser"
+import { getSupabaseClient, hasSupabaseConfig } from "@/lib/supabaseClient"
 
 export default function Profile({ authUser }) {
     const profile = getAuthUserInfo(authUser)
   const [skills, setSkills] = useState(["React", "Node.js", "Python", "Job Analysis", "System Design"])
   const [newSkill, setNewSkill] = useState("")
-  const [photo, setPhoto] = useState(null)
+    const [photo, setPhoto] = useState(null)
+    const [photoFile, setPhotoFile] = useState(null)
     const [firstName, setFirstName] = useState(profile.displayName.split(" ")[0] || "")
     const [lastName, setLastName] = useState(profile.displayName.split(" ").slice(1).join(" "))
     const [bio, setBio] = useState("")
+    const [isSaving, setIsSaving] = useState(false)
+    const [isLoadingProfile, setIsLoadingProfile] = useState(false)
+    const [statusMessage, setStatusMessage] = useState("")
+    const [errorMessage, setErrorMessage] = useState("")
+    const [avatarStoragePath, setAvatarStoragePath] = useState(null)
   const fileInputRef = useRef(null)
+
+    const resolveAvatarUrl = async (client, storagePath, fallbackUrl = null) => {
+        if (!storagePath) {
+            return fallbackUrl
+        }
+
+        const { data, error } = await client.storage.from("profilepics").createSignedUrl(storagePath, 60 * 60 * 24 * 30)
+        if (error) {
+            return fallbackUrl
+        }
+
+        return data?.signedUrl || fallbackUrl
+    }
+
+    useEffect(() => {
+        if (!authUser) {
+            return
+        }
+
+        setFirstName(profile.displayName.split(" ")[0] || "")
+        setLastName(profile.displayName.split(" ").slice(1).join(" "))
+    }, [authUser, profile.displayName])
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            if (!authUser || !hasSupabaseConfig) {
+                return
+            }
+
+            setIsLoadingProfile(true)
+            setErrorMessage("")
+
+            try {
+                const client = getSupabaseClient()
+                const { data, error } = await client
+                    .from("user_profiles")
+                    .select("first_name, last_name, bio, skills, avatar_url, avatar_storage_path")
+                    .eq("user_id", authUser.id)
+                    .maybeSingle()
+
+                if (error) {
+                    throw error
+                }
+
+                if (data) {
+                    const resolvedAvatarUrl = await resolveAvatarUrl(client, data.avatar_storage_path, data.avatar_url)
+                    setFirstName(data.first_name || profile.displayName.split(" ")[0] || "")
+                    setLastName(data.last_name || profile.displayName.split(" ").slice(1).join(" "))
+                    setBio(data.bio || "")
+                    setSkills(Array.isArray(data.skills) && data.skills.length > 0 ? data.skills : skills)
+                    setPhoto(resolvedAvatarUrl || null)
+                    setAvatarStoragePath(data.avatar_storage_path || null)
+                }
+            } catch (error) {
+                setErrorMessage(error.message || "Failed to load profile information.")
+            } finally {
+                setIsLoadingProfile(false)
+            }
+        }
+
+        loadProfile()
+    }, [authUser])
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
@@ -30,18 +99,130 @@ export default function Profile({ authUser }) {
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPhoto(reader.result)
-      }
-      reader.readAsDataURL(file)
+        if (!file) {
+            return
+        }
+
+        if (!file.type.startsWith("image/")) {
+            setErrorMessage("Please upload a valid image file.")
+            return
     }
+
+        const maxFileSizeBytes = 5 * 1024 * 1024
+        if (file.size > maxFileSizeBytes) {
+            setErrorMessage("Image size must be under 5MB.")
+            return
+        }
+
+        setErrorMessage("")
+        setStatusMessage("")
+        setPhotoFile(file)
+        setPhoto(URL.createObjectURL(file))
   }
 
   const triggerFileInput = () => {
     fileInputRef.current.click()
   }
+
+    const handleSaveProfile = async () => {
+        if (!authUser) {
+            setErrorMessage("You must be logged in to update your profile.")
+            return
+        }
+
+        if (!hasSupabaseConfig) {
+            setErrorMessage("Supabase config is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in client/.env.")
+            return
+        }
+
+        setIsSaving(true)
+        setErrorMessage("")
+        setStatusMessage("")
+
+        try {
+            const client = getSupabaseClient()
+            let profilePhotoUrl = photo
+            let newStoragePath = avatarStoragePath
+            let avatarUrlForDb = profilePhotoUrl
+
+            if (photoFile) {
+                const fileExtension = photoFile.name.includes(".")
+                    ? photoFile.name.split(".").pop()?.toLowerCase()
+                    : "jpg"
+                const safeExtension = fileExtension || "jpg"
+                const uploadPath = `${authUser.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExtension}`
+
+                const { error: uploadError } = await client.storage
+                    .from("profilepics")
+                    .upload(uploadPath, photoFile, {
+                        cacheControl: "3600",
+                        upsert: false,
+                    })
+
+                if (uploadError) {
+                    throw uploadError
+                }
+
+                const { data: publicUrlData } = client.storage.from("profilepics").getPublicUrl(uploadPath)
+                avatarUrlForDb = publicUrlData.publicUrl
+                profilePhotoUrl = await resolveAvatarUrl(client, uploadPath, avatarUrlForDb)
+                newStoragePath = uploadPath
+
+                try {
+                    await client.from("profile_pictures").update({ is_current: false }).eq("user_id", authUser.id)
+
+                    await client.from("profile_pictures").insert({
+                        user_id: authUser.id,
+                        bucket_name: "profilepics",
+                        storage_path: uploadPath,
+                        public_url: avatarUrlForDb,
+                        file_name: photoFile.name,
+                        file_size: photoFile.size,
+                        mime_type: photoFile.type,
+                        is_current: true,
+                    })
+                } catch {
+                    // Metadata table is optional; profile update should continue.
+                }
+            }
+
+            const payload = {
+                user_id: authUser.id,
+                first_name: firstName.trim(),
+                last_name: lastName.trim(),
+                bio: bio.trim(),
+                skills,
+                avatar_url: avatarUrlForDb,
+                avatar_storage_path: newStoragePath,
+                updated_at: new Date().toISOString(),
+            }
+
+            const { error: upsertError } = await client.from("user_profiles").upsert(payload, {
+                onConflict: "user_id",
+            })
+
+            if (upsertError) {
+                throw upsertError
+            }
+
+            await client.auth.updateUser({
+                data: {
+                    full_name: `${firstName} ${lastName}`.trim(),
+                    avatar_url: profilePhotoUrl,
+                },
+            })
+
+            setPhoto(profilePhotoUrl || null)
+            setAvatarStoragePath(newStoragePath)
+            setPhotoFile(null)
+            setStatusMessage("Profile updated successfully.")
+        } catch (error) {
+            setErrorMessage(error.message || "Failed to save profile.")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
   return (
     <div className="container py-10 max-w-4xl space-y-8">
       <div className="flex flex-col md:flex-row gap-8">
@@ -67,6 +248,7 @@ export default function Profile({ authUser }) {
                             onChange={handlePhotoUpload}
                         />
                     </div>
+                    <p className="text-xs text-muted-foreground">Click image to upload to your `profilepics` bucket.</p>
                     <CardTitle>{profile.displayName}</CardTitle>
                     <CardDescription>@{profile.username}</CardDescription>
                 </CardHeader>
@@ -121,7 +303,10 @@ export default function Profile({ authUser }) {
             <Card className="card-hover">
                 <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>Account details from your current session.</CardDescription>
+                                        <CardDescription>
+                                            Account details from your current session.
+                                            {isLoadingProfile ? " Loading your saved profile..." : ""}
+                                        </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -158,11 +343,13 @@ export default function Profile({ authUser }) {
                           onChange={(e) => setBio(e.target.value)}
                         />
                     </div>
+                                        {errorMessage ? <p className="text-sm text-red-500">{errorMessage}</p> : null}
+                                        {statusMessage ? <p className="text-sm text-green-600">{statusMessage}</p> : null}
                 </CardContent>
                 <CardFooter className="justify-end">
-                    <Button>
+                                        <Button onClick={handleSaveProfile} disabled={isSaving || isLoadingProfile}>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Changes
+                                            {isSaving ? "Saving..." : "Save Changes"}
                     </Button>
                 </CardFooter>
             </Card>
