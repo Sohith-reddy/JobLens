@@ -45,7 +45,7 @@ function Layout({ children, isAuthenticated, isAuthReady, onLogout, authUser }) 
         {children}
       </main>
       {!isAuthPage && <Footer />}
-      {!isAuthPage && <ChatWidget />}
+      {/* {!isAuthPage && <ChatWidget />} */}
     </div>
   )
 }
