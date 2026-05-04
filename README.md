@@ -1,7 +1,7 @@
 # JobLens AI
 
 JobLens AI is a full-stack platform that helps job seekers and teams:
-- detect potentially fraudulent job postings using ML + rule-based scoring
+- detect potentially fraudulent job postings using ML + rule-based scoring 
 - evaluate resume-to-job fit with structured feedback
 - review results in a modern React dashboard
 
