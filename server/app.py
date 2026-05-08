@@ -11,10 +11,7 @@ Endpoints:
 - DELETE /resume/cache: Clear resume parsing cache
 - GET /health: Health check endpoint
 - GET /rules: List all configured detection rules
-
-Removed endpoints (deprecated):
-- POST /score: Use /scoring/text or /scoring/url instead
-- POST /resume_match_multipart: Use /resume/match with base64 PDF instead
+- POST /summarize: Summarize a scoring result using Groq
 """
 
 from __future__ import annotations

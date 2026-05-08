@@ -14,6 +14,7 @@ import {
 import { Upload, FileText, Search, AlertCircle, CheckCircle2, XCircle, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { scoreJobText, scoreJobUrl, matchResume } from '@/lib/joblensApi'
+import axios from 'axios'
 
 const defaultReviewData = {
   sentiment: 'No Data',
@@ -80,6 +81,15 @@ function normalizeCompanyData(urlScoringResult) {
   }
 }
 
+const getSummary = async (payload) => {
+  try {
+    const response = await axios.post('http://localhost:8000/summarize', payload || {})
+    return response.data
+  } catch (error) {
+    return { summary: '', error: error?.message || 'Failed to generate summary.' }
+  }
+}
+
 export default function Home() {
   const navigate = useNavigate()
   const [jobDescription, setJobDescription] = useState('')
@@ -97,6 +107,7 @@ export default function Home() {
   const [spamReason, setSpamReason] = useState('')
   const [spamLabel, setSpamLabel] = useState('')
   const [spamPayload, setSpamPayload] = useState(null)
+  const [spamSummary, setSpamSummary] = useState('')
   const [showNotJobModal, setShowNotJobModal] = useState(false)
   const [notJobMessage, setNotJobMessage] = useState('')
   const [toast, setToast] = useState({
@@ -144,6 +155,7 @@ export default function Home() {
     setSpamReason('')
     setSpamLabel('')
     setSpamPayload(null)
+    setSpamSummary('')
   }
 
   const handleFileChange = (e) => {
@@ -233,14 +245,17 @@ export default function Home() {
           selectedResult?.final_reason ||
           'This content is not recognized as a job posting.'
 
+        const summaryResponse = await getSummary(selectedResult)
+
         setIsJobPosting(false)
         setScoringPayload(null)
         setUrlScoringPayload(null)
         setShowSpamModal(true)
-        setSpamRuleHits(selectedResult?.rule_hits || [])
-        setSpamReason(selectedResult?.final_reason || '')
-        setSpamLabel(selectedResult?.final_label || 'SCAM')
+        setSpamRuleHits(selectedResult?.rule_hits)
+        setSpamReason(selectedResult?.final_reason)
+        setSpamLabel(selectedResult?.final_label)
         setSpamPayload(selectedResult)
+        setSpamSummary(summaryResponse?.summary)
         setNotJobMessage(responseMessage)
         showToast('Not a job posting', 'Please provide a valid job posting and try again.', 'error')
         return
@@ -254,6 +269,7 @@ export default function Home() {
       setSpamReason('')
       setSpamLabel('')
       setSpamPayload(null)
+      setSpamSummary('')
       showToast('Valid job posting detected', 'Now Upload your Resume.', 'success')
 
       if (!hasUrl) {
@@ -483,37 +499,11 @@ export default function Home() {
               {spamReason || 'This posting triggered one or more scam rules.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {spamRuleHits.length === 0 ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                No rule hits were provided by the scanner.
-              </div>
-            ) : (
-              spamRuleHits.map((rule, index) => (
-                <div
-                  key={`${rule.rule_id || 'rule'}-${index}`}
-                  className="rounded-md border border-red-200 bg-red-50/50 p-3"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-red-700">
-                      {rule.rule_id || 'Rule hit'}
-                    </span>
-                    {rule.severity && (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                        {rule.severity}
-                      </span>
-                    )}
-                  </div>
-                  {rule.explanation && (
-                    <p className="text-sm text-red-700/90">{rule.explanation}</p>
-                  )}
-                  {rule.matched_text_or_pattern && (
-                    <p className="text-xs text-red-700/70">Matched: {rule.matched_text_or_pattern}</p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          {spamSummary && (
+            <div className="max-h-48 overflow-y-auto pr-1 text-sm text-red-700">
+              {spamSummary}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -1,10 +1,3 @@
-"""
-Groq-powered summarization for job scam scoring results.
-
-Takes the scoring response and generates a clear, human-readable summary
-using Groq's LLM to help users quickly understand the analysis.
-"""
-
 import json
 import logging
 from typing import Optional
@@ -16,49 +9,63 @@ from core.clients.groq_client import groq_chat, is_groq_available
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/groq", tags=["Groq AI"])
+# router = APIRouter(prefix="/groq", tags=["Groq AI"])
+router = APIRouter()
 
 
-# ---------------------------------------------------------------------------
-# System prompt – tells the LLM exactly how to summarise
-# ---------------------------------------------------------------------------
+# SUMMARY_SYSTEM_PROMPT = """You are a job-safety analyst assistant for JobLens AI.
 
-SUMMARY_SYSTEM_PROMPT = """You are a job-safety analyst assistant for JobLens AI.
+# You will receive a JSON object containing the scam-detection analysis of a job posting.
+# Your job is to produce a **concise, human-readable summary** that a non-technical job seeker can understand at a glance.
 
-You will receive a JSON object containing the scam-detection analysis of a job posting.
-Your job is to produce a **concise, human-readable summary** that a non-technical job seeker can understand at a glance.
+# STRUCTURE YOUR RESPONSE EXACTLY LIKE THIS (use markdown):
 
-STRUCTURE YOUR RESPONSE EXACTLY LIKE THIS (use markdown):
+# ## Verdict
+# State the final label (LEGIT / SUSPICIOUS / SCAM) with an appropriate emoji (✅, ⚠️, or 🚨) and one sentence explaining what it means for the user.
 
-## Verdict
-State the final label (LEGIT / SUSPICIOUS / SCAM) with an appropriate emoji (✅, ⚠️, or 🚨) and one sentence explaining what it means for the user.
+# ## Risk Score
+# Explain the rule score and ML probability in simple terms (e.g., "low risk", "high risk").
 
-## Risk Score
-Explain the rule score and ML probability in simple terms (e.g., "low risk", "high risk").
+# ## Key Findings
+# List each rule hit as a bullet point with:
+# - A severity indicator (🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🟢 LOW)
+# - The rule explanation in plain English
+# - The matched text snippet (quoted) so the user sees *what* triggered it
 
-## Key Findings
-List each rule hit as a bullet point with:
-- A severity indicator (🔴 CRITICAL, 🟠 HIGH, 🟡 MEDIUM, 🟢 LOW)
-- The rule explanation in plain English
-- The matched text snippet (quoted) so the user sees *what* triggered it
+# ## Recommendation
+# Give 2-3 actionable sentences advising the user what to do next (e.g., "Do not pay any fees", "Verify the company", "Proceed with caution").
 
-## Recommendation
-Give 2-3 actionable sentences advising the user what to do next (e.g., "Do not pay any fees", "Verify the company", "Proceed with caution").
+# RULES:
+# - Keep the entire summary under 300 words.
+# - Use simple, friendly language — avoid jargon.
+# - Do NOT invent information; only use what the JSON provides.
+# - Do NOT output raw JSON or code blocks with JSON.
+# """
 
-RULES:
-- Keep the entire summary under 300 words.
-- Use simple, friendly language — avoid jargon.
-- Do NOT invent information; only use what the JSON provides.
-- Do NOT output raw JSON or code blocks with JSON.
+SUMMARY_SYSTEM_PROMPT = """
+You are a job-safety assistant for JobLens AI.
+
+You will receive a JSON object containing analysis results of a job posting. Your task is to convert it into a clear, natural, human-readable explanation that a non-technical job seeker can easily understand.
+
+Write your response as a single coherent paragraph (or at most two short paragraphs).
+
+Requirements:
+- Clearly state whether the job is likely SCAM, SUSPICIOUS, or LEGIT.
+- Explain the most important reasons based only on the provided data.
+- Mention key warning signs in simple language.
+- If the job looks risky, explain why in a calm and factual tone.
+- If the job looks safe, briefly explain what makes it appear legitimate.
+- Do NOT use emojis, colors, bullet points, or structured headings.
+- Do NOT include technical terms like ML probability, thresholds, or model scores.
+- Do NOT repeat the same idea in different ways.
+- Do NOT invent or assume any information not present in the JSON.
+- Keep the response under 180–220 words.
+- The tone should feel like a trusted career advisor explaining the result to a user.
+
+Focus on clarity, simplicity, and trustworthiness.
 """
 
-
-# ---------------------------------------------------------------------------
-# Request / Response models
-# ---------------------------------------------------------------------------
-
 class SummarizeRequest(BaseModel):
-    """Request body for the /groq/summarize endpoint."""
     ml_probability: float
     ml_pred: int
     rule_hits: list[dict]
@@ -71,15 +78,11 @@ class SummarizeRequest(BaseModel):
 
 
 class SummarizeResponse(BaseModel):
-    """Response from the /groq/summarize endpoint."""
     summary: str = Field(..., description="Human-readable summary of the scoring result")
-    final_label: str = Field(..., description="Original final label echoed back")
-    is_legit: bool = Field(..., description="Whether the posting was classified as legit")
+    # final_label: str = Field(..., description="Original final label echoed back")
+    # is_legit: bool = Field(..., description="Whether the posting was classified as legit")
 
 
-# ---------------------------------------------------------------------------
-# Core summarisation function (reusable outside the route)
-# ---------------------------------------------------------------------------
 
 def generate_score_summary(score_result: dict) -> Optional[str]:
     """
@@ -108,7 +111,7 @@ def generate_score_summary(score_result: dict) -> Optional[str]:
 
     summary = groq_chat(
         messages=messages,
-        temperature=0.3,   # Slightly creative but mostly deterministic
+        temperature=0.3,  
         max_tokens=1024,
     )
 
@@ -116,11 +119,6 @@ def generate_score_summary(score_result: dict) -> Optional[str]:
         logger.info("Groq summary generated successfully (%d chars)", len(summary))
 
     return summary
-
-
-# ---------------------------------------------------------------------------
-# FastAPI endpoint
-# ---------------------------------------------------------------------------
 
 @router.post(
     "/summarize",
@@ -149,6 +147,6 @@ async def summarize_score(request: SummarizeRequest) -> SummarizeResponse:
 
     return SummarizeResponse(
         summary=summary,
-        final_label=request.final_label,
-        is_legit=request.is_legit,
+        # final_label=request.final_label,
+        # is_legit=request.is_legit,
     )
