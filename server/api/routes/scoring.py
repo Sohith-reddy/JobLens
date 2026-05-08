@@ -91,6 +91,8 @@ async def score_job_posting_url(
             f"rule_score={score_result['rule_score']:.2f}"
         )
 
+        score_result["is_legit"] = score_result["final_label"] == "LEGIT"
+
         return ScoreURLResponse(
             url=request.url,
             final_extracted_text=extracted_text,
@@ -187,6 +189,8 @@ async def score_plain_text(
             f"ml_prob={result['ml_probability']:.4f}, "
             f"rule_score={result['rule_score']:.2f}"
         )
+
+        result["is_legit"] = result["final_label"] == "LEGIT"
 
         return ScoreResponse(**result)
 

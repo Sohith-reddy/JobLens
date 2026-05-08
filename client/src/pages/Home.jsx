@@ -48,8 +48,8 @@ function normalizeScoringResult(scoringResult, extractionConfidence = null) {
     }
   }
 
-  const confidenceFromResult = Number(scoringResult.extraction_confidence)
-  const confidenceFromPayload = Number(extractionConfidence)
+  const confidenceFromResult = +(scoringResult.extraction_confidence)
+  const confidenceFromPayload = +(extractionConfidence)
   const hasConfidenceFromResult = Number.isFinite(confidenceFromResult)
   const hasConfidenceFromPayload = Number.isFinite(confidenceFromPayload)
   const effectiveConfidence = hasConfidenceFromPayload
@@ -92,6 +92,11 @@ export default function Home() {
   const [urlScoringPayload, setUrlScoringPayload] = useState(null)
   const [jobDescriptionForResume, setJobDescriptionForResume] = useState('')
   const [jobInputMap, setJobInputMap] = useState(() => new Map())
+  const [showSpamModal, setShowSpamModal] = useState(false)
+  const [spamRuleHits, setSpamRuleHits] = useState([])
+  const [spamReason, setSpamReason] = useState('')
+  const [spamLabel, setSpamLabel] = useState('')
+  const [spamPayload, setSpamPayload] = useState(null)
   const [showNotJobModal, setShowNotJobModal] = useState(false)
   const [notJobMessage, setNotJobMessage] = useState('')
   const [toast, setToast] = useState({
@@ -134,6 +139,11 @@ export default function Home() {
     setJobDescriptionForResume('')
     setJobInputMap(new Map())
     setFile(null)
+    setShowSpamModal(false)
+    setSpamRuleHits([])
+    setSpamReason('')
+    setSpamLabel('')
+    setSpamPayload(null)
   }
 
   const handleFileChange = (e) => {
@@ -217,7 +227,7 @@ export default function Home() {
         )
       }
 
-      if (selectedResult?.is_job_posting === false) {
+      if (selectedResult?.is_legit === false) {
         const responseMessage =
           selectedResult?.message ||
           selectedResult?.final_reason ||
@@ -226,8 +236,12 @@ export default function Home() {
         setIsJobPosting(false)
         setScoringPayload(null)
         setUrlScoringPayload(null)
+        setShowSpamModal(true)
+        setSpamRuleHits(selectedResult?.rule_hits || [])
+        setSpamReason(selectedResult?.final_reason || '')
+        setSpamLabel(selectedResult?.final_label || 'SCAM')
+        setSpamPayload(selectedResult)
         setNotJobMessage(responseMessage)
-        setShowNotJobModal(true)
         showToast('Not a job posting', 'Please provide a valid job posting and try again.', 'error')
         return
       }
@@ -235,6 +249,11 @@ export default function Home() {
       setIsJobPosting(true)
       setScoringPayload(selectedResult)
       setUrlScoringPayload(selectedUrlResult)
+      setShowSpamModal(false)
+      setSpamRuleHits([])
+      setSpamReason('')
+      setSpamLabel('')
+      setSpamPayload(null)
       showToast('Valid job posting detected', 'Now Upload your Resume.', 'success')
 
       if (!hasUrl) {
@@ -451,6 +470,50 @@ export default function Home() {
               {notJobMessage || 'The provided content was not identified as a job posting.'}
             </DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSpamModal} onOpenChange={setShowSpamModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <XCircle className="h-5 w-5" /> Spam detected: {spamLabel || 'SCAM'}
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm leading-relaxed">
+              {spamReason || 'This posting triggered one or more scam rules.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {spamRuleHits.length === 0 ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                No rule hits were provided by the scanner.
+              </div>
+            ) : (
+              spamRuleHits.map((rule, index) => (
+                <div
+                  key={`${rule.rule_id || 'rule'}-${index}`}
+                  className="rounded-md border border-red-200 bg-red-50/50 p-3"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-red-700">
+                      {rule.rule_id || 'Rule hit'}
+                    </span>
+                    {rule.severity && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                        {rule.severity}
+                      </span>
+                    )}
+                  </div>
+                  {rule.explanation && (
+                    <p className="text-sm text-red-700/90">{rule.explanation}</p>
+                  )}
+                  {rule.matched_text_or_pattern && (
+                    <p className="text-xs text-red-700/70">Matched: {rule.matched_text_or_pattern}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

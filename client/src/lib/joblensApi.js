@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.FASTAPI_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_FASTAPI_BACKEND_URL
 
 async function parseResponse(response) {
   const contentType = response.headers.get("content-type") || ""

@@ -13,7 +13,7 @@ import httpx
 import asyncio
 
 from api.config import DEFAULT_MODEL_PATH
-from api.routes import scoring_router, resume_router, system_router, config_router
+from api.routes import scoring_router, resume_router, system_router, config_router, groq_router
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(resume_router)
     app.include_router(system_router)
     app.include_router(config_router)
+    app.include_router(groq_router)
 
     return app
 

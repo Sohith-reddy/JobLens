@@ -60,6 +60,7 @@ class ScoreResponse(BaseModel):
     final_reason: str = Field(..., description="Human-readable explanation for the classification")
     decision_path: list[str] = Field(..., description="Step-by-step decision explanation")
     is_job_posting: bool = Field(default=True, description="Whether the text is a valid job posting")
+    is_legit: bool = Field(default=True, description="Whether the text is a legit job posting")
 
 
 class NotJobPostingResponse(BaseModel):

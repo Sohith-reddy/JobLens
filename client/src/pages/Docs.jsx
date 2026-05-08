@@ -11,8 +11,8 @@ export default function Docs() {
 
   const sections = [
     { id: "introduction", title: "Introduction" },
-    { id: "codebase", title: "Codebase" },
-    { id: "api-status", title: "API Status" },
+    // { id: "codebase", title: "Codebase" },
+    // { id: "api-status", title: "API Status" },
     { id: "features", title: "Key Features" },
     { id: "usage", title: "How to Use" },
     { id: "privacy", title: "Privacy & Safety" },
@@ -115,7 +115,7 @@ export default function Docs() {
             </p>
         </section>
 
-        <section id="codebase" className="space-y-4 pt-8">
+        {/* <section id="codebase" className="space-y-4 pt-8">
             <h2 className="text-2xl font-bold border-b pb-2">Codebase</h2>
             <p className="text-muted-foreground">
                 JobLens AI is organized as a React frontend and a FastAPI backend. The frontend handles input,
@@ -161,9 +161,9 @@ export default function Docs() {
                     <p>• Resume uploads are restricted to <span className="font-medium text-foreground">PDF only</span> in the current frontend flow.</p>
                 </CardContent>
             </Card>
-        </section>
+        </section> */}
 
-                <section id="api-status" className="space-y-4 pt-8">
+                {/* <section id="api-status" className="space-y-4 pt-8">
                         <h2 className="text-2xl font-bold border-b pb-2">API Status</h2>
 
                         {apiError && (
@@ -219,7 +219,7 @@ export default function Docs() {
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-                </section>
+                </section> */}
 
         <section id="features" className="space-y-4 pt-8">
             <h2 className="text-2xl font-bold border-b pb-2">Key Features</h2>
