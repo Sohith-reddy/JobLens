@@ -151,6 +151,7 @@ PORT=8000
 | `/resume/cache` | DELETE | Clear cached resume parsing results |
 | `/health` | GET | Service health check |
 | `/rules` | GET | Detection rules and metadata |
+| `/summarize` | POST | Fake Job Posting Summarization |
 
 ---
 
