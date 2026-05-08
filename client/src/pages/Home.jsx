@@ -239,7 +239,7 @@ export default function Home() {
         )
       }
 
-      if (selectedResult?.is_legit === false) {
+      if (!selectedResult?.is_job_posting) {
         const responseMessage =
           selectedResult?.message ||
           selectedResult?.final_reason ||
