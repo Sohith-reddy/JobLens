@@ -83,22 +83,22 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Analysis Report</h1>
       </div>
 
-      <div className="grid gap-6">
+      {/* <div className="grid gap-6">
         <ScamDetector data={data.scamAnalysis} />
-      </div>
+      </div> */}
 
       <div className="grid gap-6 lg:grid-cols-10">
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-10">
           <ResumeMatch data={data.resumeMatch} />
         </div>
-        <div className="lg:col-span-3">
+        {/* <div className="lg:col-span-3">
           <CompanyVerifier data={data.companyVerification} />
-        </div>
+        </div> */}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* <div className="grid gap-6 md:grid-cols-2">
         <ReviewSentiment data={data.reviews} />
-      </div>
+      </div> */}
 
       {data.scamAnalysis?.reason && (
         <div className="rounded-md border p-4 text-sm text-muted-foreground">
