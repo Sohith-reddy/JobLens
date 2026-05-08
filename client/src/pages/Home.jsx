@@ -239,7 +239,21 @@ export default function Home() {
         )
       }
 
-      if (!selectedResult?.is_job_posting) {
+      if (selectedResult?.is_job_posting == false) {
+        const responseMessage =
+          selectedResult?.message ||
+          selectedResult?.final_reason ||
+          'This content is not recognized as a job posting.'
+
+        setIsJobPosting(false)
+        setScoringPayload(null)
+        setUrlScoringPayload(null)
+        setNotJobMessage(responseMessage)
+        showToast('Not a job posting', 'Please provide a valid job posting and try again.', 'error')
+        return
+      }
+
+      if (selectedResult?.is_legit == false) {
         const responseMessage =
           selectedResult?.message ||
           selectedResult?.final_reason ||
@@ -257,7 +271,6 @@ export default function Home() {
         setSpamPayload(selectedResult)
         setSpamSummary(summaryResponse?.summary)
         setNotJobMessage(responseMessage)
-        showToast('Not a job posting', 'Please provide a valid job posting and try again.', 'error')
         return
       }
 
@@ -495,14 +508,40 @@ export default function Home() {
             <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
               <XCircle className="h-5 w-5" /> Spam detected: {spamLabel || 'SCAM'}
             </DialogTitle>
-            <DialogDescription className="pt-2 text-sm leading-relaxed">
+            {/* <DialogDescription className="pt-2 text-sm leading-relaxed">
               {spamReason || 'This posting triggered one or more scam rules.'}
-            </DialogDescription>
+            </DialogDescription> */}
           </DialogHeader>
           {spamSummary && (
-            <div className="max-h-48 overflow-y-auto pr-1 text-sm text-red-700">
-              {spamSummary}
-            </div>
+            <Card className="border-red-200 bg-red-50/50 dark:border-red-900/40 dark:bg-red-950/20">
+              <CardContent className="pt-6">
+                <div className="max-h-64 overflow-y-auto pr-2">
+                  {spamSummary.split('\n').map((line, index) => {
+                    const isBulletPoint = line.trim().startsWith('*')
+                    const content = isBulletPoint ? line.trim().substring(1).trim() : line.trim()
+                    
+                    if (!content) return null
+                    
+                    if (isBulletPoint) {
+                      return (
+                        <div key={index} className="flex items-start gap-3 mb-3 last:mb-0">
+                          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                          <span className="text-sm text-red-800 dark:text-red-200 leading-relaxed">
+                            {content}
+                          </span>
+                        </div>
+                      )
+                    }
+                    
+                    return (
+                      <p key={index} className="text-sm font-medium text-red-900 dark:text-red-100 mb-3">
+                        {content}
+                      </p>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </DialogContent>
       </Dialog>
